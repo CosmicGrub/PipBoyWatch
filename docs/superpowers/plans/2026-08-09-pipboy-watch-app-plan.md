@@ -210,6 +210,48 @@ Worth doing next time you're wearing the watch outside.
 **Done when:** controlling playback from the watch actually changes what's
 playing on the phone.
 
+**Actual outcome:** built correctly, but blocked by the same permission
+gap Holotapes hit in Phase 4 — and this time investigated much further
+before accepting it. RADIO reads the phone's currently-playing media by
+extracting the `MediaSession.Token` embedded in a bridged MediaStyle
+notification's extras (`Notification.EXTRA_MEDIA_SESSION`), reusing the
+`PipBoyNotificationListenerService` already built for Holotapes — a
+deliberate reuse of that same permission rather than a separate one, and
+the standard, documented pattern for third-party "now playing" widgets.
+`MediaController.transportControls` then drives play/pause/skip/volume
+directly against that token — no extra permission needed beyond
+notification-listener access itself.
+
+The blocker: this Watch6 Classic has no way to actually grant that
+access. Beyond Phase 4's finding (the standard
+`ACTION_NOTIFICATION_LISTENER_SETTINGS` intent crashes, unresolvable),
+this phase searched further — dumped the real Wear Settings app's
+(`com.google.android.apps.wearable.settings`) declared activities and
+intent-filters directly via `dumpsys package`, and found no notification
+*listener* access screen at all (only `APP_NOTIFICATION_SETTINGS`-style
+screens, which control whether an app can post its own notifications —
+a different permission from reading others'). Unlike Phase 2's Health
+Connect gap, there's no clean phone-relay workaround here either: the
+media token has to come from a notification actually bridged to the
+*watch*, so watch-side listener access is unavoidable regardless of
+where the media session originates.
+
+Most likely explanation: Samsung may gate this behind the phone-side
+Galaxy Wearable companion app for watch apps installed through the
+Galaxy Store, and our app is sideloaded — but this couldn't be confirmed
+from this session (no way to drive the paired phone's UI here). Worth
+checking Galaxy Wearable's app-permission screen by hand next time you
+have the phone in front of you; if it's there, RADIO should start
+working immediately with no code changes, since the watch-side plumbing
+is already correct and waiting.
+
+Session also lost the wifi ADB connection again near the end of this
+phase (likely screen-lock related, same class of issue as the very
+first connection drop this session) and it didn't recover via mDNS
+auto-reconnect this time — full on-device transport-control testing
+(confirming a Pause tap actually pauses phone audio) is still
+outstanding, blocked on both the permission gap above and reconnecting.
+
 ## Phase 7 — Phone Notes Receiver
 
 - New minimal `phone` Gradle module: a single Share-target activity

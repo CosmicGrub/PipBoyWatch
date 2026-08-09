@@ -11,6 +11,7 @@ import com.pipboywatch.app.ui.tab.DataScreen
 import com.pipboywatch.app.ui.tab.InvScreen
 import com.pipboywatch.app.ui.tab.MapScreen
 import com.pipboywatch.app.ui.tab.PlaceholderTabScreen
+import com.pipboywatch.app.ui.tab.RadioScreen
 import com.pipboywatch.app.ui.tab.StatScreen
 
 private const val ROUTE_HOME = "home"
@@ -44,6 +45,7 @@ fun PipBoyApp() {
                 PipBoyTab.INV -> InvScreen()
                 PipBoyTab.DATA -> DataScreen()
                 PipBoyTab.MAP -> MapScreen()
+                PipBoyTab.RADIO -> RadioScreen()
                 else -> PlaceholderTabScreen(tab)
             }
         }
