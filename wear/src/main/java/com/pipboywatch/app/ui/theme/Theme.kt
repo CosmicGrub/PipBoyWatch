@@ -2,8 +2,10 @@ package com.pipboywatch.app.ui.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.wear.compose.material.Colors
 import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.Typography
 
 // CRT phosphor palette — everything else in the app should pull from these
 // via MaterialTheme.colors rather than hardcoding hex values.
@@ -27,10 +29,15 @@ private val PipBoyColors = Colors(
     onError = CrtBlack
 )
 
+// Monospace everywhere — cheapest way to make every screen read as a
+// terminal instead of default Wear OS Sans.
+private val PipBoyTypography = Typography(defaultFontFamily = FontFamily.Monospace)
+
 @Composable
 fun PipBoyTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colors = PipBoyColors,
+        typography = PipBoyTypography,
         content = content
     )
 }

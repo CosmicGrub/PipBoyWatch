@@ -1,0 +1,77 @@
+package com.pipboywatch.app.ui.tab
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
+import androidx.wear.compose.foundation.rotary.rotaryScrollable
+import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.Text
+import com.pipboywatch.app.ui.PipBoyTab
+import com.pipboywatch.app.ui.components.CrtCard
+import com.pipboywatch.app.ui.components.ScanlineOverlay
+
+/**
+ * Placeholder content for a tab, entered by tapping it on the home dial.
+ * Real STAT/INV/DATA/MAP/RADIO screens replace this body phase by phase;
+ * this exists to validate navigation + bezel-scroll-within-a-screen now.
+ */
+@Composable
+fun TabContentScreen(tab: PipBoyTab) {
+    val scrollState = rememberScrollState()
+    val focusRequester = remember { FocusRequester() }
+    val rotaryBehavior = RotaryScrollableDefaults.behavior(scrollableState = scrollState)
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .rotaryScrollable(rotaryBehavior, focusRequester)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(top = 28.dp, bottom = 24.dp, start = 12.dp, end = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = tab.label,
+                style = MaterialTheme.typography.title2,
+                color = MaterialTheme.colors.primary
+            )
+            Spacer(Modifier.height(12.dp))
+            CrtCard(title = "STATUS") {
+                Text(
+                    text = "Real ${tab.label} content arrives in a later phase.",
+                    color = MaterialTheme.colors.primary,
+                    style = MaterialTheme.typography.body2
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            repeat(6) { i ->
+                CrtCard(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Text(
+                        text = "Placeholder row ${i + 1}",
+                        color = MaterialTheme.colors.primary,
+                        style = MaterialTheme.typography.body2
+                    )
+                }
+            }
+        }
+        ScanlineOverlay()
+    }
+}
