@@ -9,6 +9,7 @@ import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.pipboywatch.app.ui.home.HomeDialScreen
 import com.pipboywatch.app.ui.tab.DataScreen
 import com.pipboywatch.app.ui.tab.InvScreen
+import com.pipboywatch.app.ui.tab.MapScreen
 import com.pipboywatch.app.ui.tab.PlaceholderTabScreen
 import com.pipboywatch.app.ui.tab.StatScreen
 
@@ -42,6 +43,7 @@ fun PipBoyApp() {
                 PipBoyTab.STAT -> StatScreen()
                 PipBoyTab.INV -> InvScreen()
                 PipBoyTab.DATA -> DataScreen()
+                PipBoyTab.MAP -> MapScreen()
                 else -> PlaceholderTabScreen(tab)
             }
         }

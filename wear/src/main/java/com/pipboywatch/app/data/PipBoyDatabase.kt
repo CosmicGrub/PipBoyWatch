@@ -10,9 +10,10 @@ import androidx.room.RoomDatabase
         InvItemEntity::class,
         QuestEntity::class,
         HolotapeEntity::class,
-        NoteEntity::class
+        NoteEntity::class,
+        RunEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class PipBoyDatabase : RoomDatabase() {
@@ -20,6 +21,7 @@ abstract class PipBoyDatabase : RoomDatabase() {
     abstract fun questDao(): QuestDao
     abstract fun holotapeDao(): HolotapeDao
     abstract fun noteDao(): NoteDao
+    abstract fun runDao(): RunDao
 
     companion object {
         @Volatile private var instance: PipBoyDatabase? = null

@@ -63,4 +63,6 @@ dependencies {
 
     implementation("androidx.wear:wear-input:1.2.0")
     implementation("androidx.core:core-ktx:1.13.1")
+
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 }

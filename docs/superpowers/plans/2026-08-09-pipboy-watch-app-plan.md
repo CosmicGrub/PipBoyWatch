@@ -170,6 +170,37 @@ applied to a case that would otherwise have crashed instead of degrading.
 **Done when:** a real GPS run around the block gets recorded, saved, and
 shows up correctly in Past Runs afterward.
 
+**Actual outcome:** the full mechanism is proven live on-device with real
+sensor data — but this was a stationary/indoor test (this session can't
+physically walk around with the watch), not an actual run around the
+block. Verified for real:
+- Location permission dialog: genuine system prompt, "While using app"
+  granted correctly, persisted across a force-stop + relaunch.
+- Live GPS tracking: `FusedLocationProviderClient` genuinely fired
+  location updates (0.06 km of indoor GPS drift accumulated while sitting
+  still — normal indoor GPS noise, and proof the callback pipeline is
+  live, not proof of intentional movement).
+- Barometer: real pressure-derived elevation-gain readings accumulated.
+- Heart rate: sensor registered without error; showed "--" throughout
+  since the watch wasn't worn during the test (no crash, correct
+  graceful state — genuinely wearing it during a run is the real test).
+- Ticker, Stop/save, Past Runs list, and best-pace/best-climb tagging all
+  verified correct, including surviving a genuine force-stop + relaunch.
+
+Heart rate comes straight from the raw `TYPE_HEART_RATE` sensor rather
+than Health Connect — deliberately sidesteps this device's Phase 2 HC
+gap entirely for this tab.
+
+Tracking is foreground-only (no foreground service) — stops if you leave
+the MAP screen mid-run. Acceptable v1 tradeoff per the spec's MAP scope
+decision; a foreground service is a reasonable Phase 8 polish candidate
+if that turns out to matter in practice.
+
+**Still needed:** an actual outdoor walk to validate real-world distance/
+pace accuracy against a known route — the mechanism is proven correct,
+but real GPS accuracy outdoors (vs. indoor drift) hasn't been observed.
+Worth doing next time you're wearing the watch outside.
+
 ## Phase 6 — RADIO
 
 - Integrate `MediaController`/`MediaSession` to read phone playback state
