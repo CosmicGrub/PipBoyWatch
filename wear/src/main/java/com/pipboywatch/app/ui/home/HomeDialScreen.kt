@@ -17,9 +17,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.rememberActiveFocusRequester
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
 import androidx.wear.compose.foundation.rotary.rotaryScrollable
 import androidx.wear.compose.material.MaterialTheme
@@ -35,12 +35,10 @@ import com.pipboywatch.app.ui.components.ScanlineOverlay
 fun HomeDialScreen(onTabSelected: (PipBoyTab) -> Unit) {
     val tabs = PipBoyTab.entries
     var selectedIndex by rememberSaveable { mutableStateOf(0) }
-    val focusRequester = remember { FocusRequester() }
+    val focusRequester = rememberActiveFocusRequester()
     val view = LocalView.current
     var accumulatedScroll by remember { mutableStateOf(0f) }
     val detentThreshold = 50f
-
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     fun step(direction: Int) {
         selectedIndex = (selectedIndex + direction + tabs.size) % tabs.size

@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -30,6 +31,10 @@ android {
     buildFeatures {
         compose = true
     }
+
+    kotlinOptions {
+        freeCompilerArgs += "-opt-in=androidx.wear.compose.foundation.ExperimentalWearFoundationApi"
+    }
 }
 
 dependencies {
@@ -46,4 +51,13 @@ dependencies {
     implementation("androidx.wear:wear:1.3.0")
 
     implementation("androidx.health.connect:connect-client:1.1.0")
+
+    implementation("androidx.room:room-runtime:2.8.4")
+    implementation("androidx.room:room-ktx:2.8.4")
+    ksp("androidx.room:room-compiler:2.8.4")
+
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    implementation("com.google.android.gms:play-services-wearable:20.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 }

@@ -36,6 +36,18 @@ watch via a wifi ADB deploy, no cable involved.
 enter/exit each one, and it visually reads as "Pip-Boy," not default
 Wear OS.
 
+**Correction (found in Phase 3):** at the time, this was only verified via
+tap and swipe — real bezel/rotary input was never actually tested (no way
+to simulate it yet). It turned out to be broken: a plain
+`remember { FocusRequester() }` + `LaunchedEffect(Unit) { requestFocus() }`
+doesn't reliably acquire focus in time for rotary dispatch on a freshly
+composed screen. Fixed in Phase 3 across all screens by switching to Wear
+Compose Foundation's `rememberActiveFocusRequester()`, its purpose-built
+solution for this exact timing problem. Lesson: verify every stated input
+method for real before marking a phase done, not just the ones convenient
+to test at the time — see Phase 3 below for how rotary got tested via
+`adb shell input rotaryencoder scroll`.
+
 ## Phase 2 — STAT
 
 - Request Health Connect permissions (steps, heart rate, sleep, exercise).
@@ -70,6 +82,24 @@ STAT data becomes a priority.
 
 **Done when:** the checklist auto-checks "phone" when your phone is
 BT-connected, resets each morning, and persists taps across app restarts.
+
+**Actual outcome:** all done-when criteria verified live on-device —
+including a genuine force-stop + relaunch (Room/DataStore persistence
+confirmed, not just in-memory state). Decisions made along the way:
+- Phone presence uses the Wear Data Layer's `NodeClient.connectedNodes`
+  (reflects the real watch<->phone companion link) rather than raw
+  Bluetooth pairing state — no BLUETOOTH_CONNECT permission needed either.
+- Daily reset resolved as "reset on first screen visit after midnight"
+  (compare stored last-reset date to today on each visit) rather than a
+  background job — simplest option that meets the requirement.
+- Found and fixed the Phase 1 rotary-focus bug (see Phase 1's correction
+  note) using `rememberActiveFocusRequester()`. Verified real rotary
+  input end-to-end for the first time this phase via
+  `adb shell input rotaryencoder scroll --axis SCROLL,<n>` — small values
+  (1-3) land close to one detent; larger values trigger the platform's
+  fling physics and overshoot multiple tabs, which is expected simulator
+  behavior (a single synthetic event lacks the timing data of continuous
+  real bezel rotation) and not a concern for actual hardware use.
 
 ## Phase 4 — DATA
 

@@ -7,6 +7,7 @@ import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.pipboywatch.app.ui.home.HomeDialScreen
+import com.pipboywatch.app.ui.tab.InvScreen
 import com.pipboywatch.app.ui.tab.PlaceholderTabScreen
 import com.pipboywatch.app.ui.tab.StatScreen
 
@@ -38,6 +39,7 @@ fun PipBoyApp() {
             val tabName = backStackEntry.arguments?.getString(ARG_TAB_NAME) ?: PipBoyTab.STAT.name
             when (val tab = PipBoyTab.valueOf(tabName)) {
                 PipBoyTab.STAT -> StatScreen()
+                PipBoyTab.INV -> InvScreen()
                 else -> PlaceholderTabScreen(tab)
             }
         }
