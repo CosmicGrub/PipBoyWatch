@@ -51,5 +51,26 @@
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity-alias>
+
+        <!-- Holotapes: user must manually grant this via
+             Settings > Notifications > Notification access. -->
+        <service
+            android:name=".data.notifications.PipBoyNotificationListenerService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Notes: receives phone-relayed notes over the Wear Data Layer.
+             Nothing sends to this until Phase 7 builds the phone sender. -->
+        <service
+            android:name=".data.notes.PipBoyMessageListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

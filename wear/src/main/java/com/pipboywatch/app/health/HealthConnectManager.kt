@@ -153,6 +153,27 @@ class HealthConnectManager(context: Context) {
             }
     }
 
+    /** Used by the Perks "Step Streak" rule — true only if every one of the
+     * last [days] days independently hit [thresholdSteps]. */
+    suspend fun hasStepStreak(days: Int = 7, thresholdSteps: Long = 5000): Boolean {
+        val c = client ?: return false
+        val zone = ZoneId.systemDefault()
+        for (dayOffset in 0 until days) {
+            val day = LocalDate.now(zone).minusDays(dayOffset.toLong())
+            val start = day.atStartOfDay(zone).toInstant()
+            val end = day.plusDays(1).atStartOfDay(zone).toInstant()
+            val response = c.aggregate(
+                AggregateRequest(
+                    metrics = setOf(StepsRecord.COUNT_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end)
+                )
+            )
+            val steps = response[StepsRecord.COUNT_TOTAL] ?: 0L
+            if (steps < thresholdSteps) return false
+        }
+        return true
+    }
+
     private fun todayRange(): Pair<Instant, Instant> {
         val zone = ZoneId.systemDefault()
         val startOfDay = LocalDate.now(zone).atStartOfDay(zone).toInstant()

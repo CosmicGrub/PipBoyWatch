@@ -25,4 +25,7 @@ interface InvItemDao {
 
     @Query("SELECT * FROM inv_items WHERE isSystemLinked = 1 LIMIT 1")
     suspend fun getSystemLinkedItem(): InvItemEntity?
+
+    @Query("SELECT * FROM inv_items")
+    suspend fun getAllOnce(): List<InvItemEntity>
 }

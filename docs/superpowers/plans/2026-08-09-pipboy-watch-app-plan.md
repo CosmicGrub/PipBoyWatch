@@ -120,6 +120,45 @@ on-watch, actual recent notifications, at least one working perk rule);
 Notes can render stored items even before Phase 7 exists (seed test data
 manually to verify the UI).
 
+**Actual outcome:** all four sub-pages built as one continuously
+scrollable screen (QUESTS/HOLOTAPES/PERKS/NOTES sections stacked in a
+single Column) rather than separate swipeable pages — resolves an
+ambiguity the spec left open, and stays consistent with how STAT/INV
+already work rather than introducing a new sub-navigation pattern.
+Verified live on-device, including full round-trips (not just UI review):
+- **Quests:** add (via on-watch voice/keyboard text capture —
+  `androidx.wear:wear-input`'s `RemoteInputIntentHelper`, the standard
+  Wear pattern for one-off text entry), toggle done, delete — all
+  confirmed working, including the actual Samsung keyboard/voice picker
+  launching for real.
+- **Holotapes:** `NotificationListenerService` built and registered;
+  permission-gate card confirmed. Also **decided Notes' "seed test data"
+  verification method here**: rather than throwaway test-only UI, on-watch
+  note entry (same RemoteInput flow as Quests) became a real, permanent
+  feature — gives genuine user value now and doubles as the verification
+  path the plan asked for, rather than something to strip out later.
+- **Perks:** resolved the spec's persistence open question — computed
+  on-the-fly at read time from existing INV/STAT data rather than a
+  separate table (both rules are cheap boolean checks; a synced table
+  would just be a second source of truth for no benefit). "Fully Loaded"
+  (all INV items checked) is genuinely exercisable today; "Step Streak"
+  is wired correctly but inherits STAT's known Health Connect limitation
+  from Phase 2 — confirmed it fails honestly rather than silently.
+- **Notes:** on-watch add flow verified end-to-end (text -> Room -> UI).
+  The phone-relay `WearableListenerService` is built and registered but
+  correctly unexercised — nothing sends to it until Phase 7.
+
+**Bug found and fixed:** tapping Holotapes' "GRANT" button crashed the
+app — `ActivityNotFoundException: No Activity found to handle Intent {
+act=android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS }`. This
+Samsung Wear OS build doesn't implement that standard Android settings
+screen. Confirmed via logcat, not guessed. Fixed by catching the
+exception and showing an honest inline message ("this watch doesn't
+expose that settings screen directly — try the paired phone's Galaxy
+Wearable app instead") rather than a fallback that couldn't be verified
+to actually work. Same graceful-degradation principle as STAT/Perks,
+applied to a case that would otherwise have crashed instead of degrading.
+
 ## Phase 5 — MAP (Run Tracker)
 
 - Room schema for run history (route points, pace, distance, elevation,

@@ -54,6 +54,12 @@ class InvRepository(context: Context) {
         dao.setChecked(item.id, !item.isChecked)
     }
 
+    /** Used by the Perks "Fully Loaded" rule. */
+    suspend fun isFullyChecked(): Boolean {
+        val items = dao.getAllOnce()
+        return items.isNotEmpty() && items.all { it.isChecked }
+    }
+
     suspend fun refreshPhoneConnection() {
         val phoneItem = dao.getSystemLinkedItem() ?: return
         val connected = try {
