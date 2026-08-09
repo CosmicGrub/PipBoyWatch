@@ -265,6 +265,46 @@ outstanding, blocked on both the permission gap above and reconnecting.
 **Done when:** sharing a note from your phone reliably shows up on the
 watch within a few seconds.
 
+**Actual outcome:** the `:phone` Gradle module is built and installed on
+the paired phone (SM-F946U) — a minimal `SendNoteActivity` registered for
+`ACTION_SEND`/`text/plain`, appearing as "Pip-Boy Notes" in Android's
+Share sheet, relaying the shared text to every connected watch node over
+`MessageClient`. Two real bugs found and fixed along the way:
+
+1. **applicationId mismatch.** The phone module was initially
+   `com.pipboywatch.notes`, distinct from the watch app's
+   `com.pipboywatch.app`. The Wear Data Layer routes messages by AppKey
+   (package name + signing certificate), so a phone app and its watch
+   companion must share the same applicationId to be recognized as a
+   pair — confirmed via a live `Failed to deliver message to AppKey`
+   entry in the watch's system log, not assumed from docs alone. Fixed
+   by matching `applicationId` across both modules (the phone module's
+   Kotlin package/`namespace` stays `com.pipboywatch.notes` — only the
+   applicationId needed to match).
+2. **Toast-then-finish race.** `SendNoteActivity` called `finish()`
+   immediately after `Toast.show()`, which could tear the activity down
+   before the OS actually displayed the toast (`Toast already killed` in
+   logcat). Fixed with a short `Handler.postDelayed` before finishing.
+
+**Still unresolved:** even after the applicationId fix (verified via
+matching `apksigner` certificate output on both APKs) and a forced
+Google Play Services restart on the watch, message delivery still failed
+with the same `Failed to deliver message to AppKey` error. Notably, the
+exact same failure was observed for several of *Samsung's own* first-
+party system capabilities immediately after the GMS restart — strong
+evidence this is watch-side Play Services flakiness on this specific
+device/session, not something wrong with our app's code or manifest
+(independently confirmed correct via `dumpsys package`). Session also
+lost the wifi ADB connection to the watch multiple times during this
+phase, adding friction to isolating the issue further.
+
+Diagnostic logging (`Log.d("PipBoyNotes", ...)` on both the phone send
+path and the watch's `onMessageReceived`) was added specifically to make
+this debuggable and is worth keeping rather than stripping out. Next
+step for whoever picks this back up: retry the exact same send with a
+stable wifi ADB connection and a watch that hasn't just had GMS force-
+restarted, to rule the flakiness theory in or out cleanly.
+
 ## Phase 8 — Polish & Device Testing Pass
 
 - Battery impact check, especially for MAP's GPS use and STAT's periodic
