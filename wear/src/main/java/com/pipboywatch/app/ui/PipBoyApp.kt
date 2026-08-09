@@ -7,7 +7,8 @@ import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.pipboywatch.app.ui.home.HomeDialScreen
-import com.pipboywatch.app.ui.tab.TabContentScreen
+import com.pipboywatch.app.ui.tab.PlaceholderTabScreen
+import com.pipboywatch.app.ui.tab.StatScreen
 
 private const val ROUTE_HOME = "home"
 private const val ROUTE_TAB = "tab/{tabName}"
@@ -35,7 +36,10 @@ fun PipBoyApp() {
             arguments = listOf(navArgument(ARG_TAB_NAME) { type = NavType.StringType })
         ) { backStackEntry ->
             val tabName = backStackEntry.arguments?.getString(ARG_TAB_NAME) ?: PipBoyTab.STAT.name
-            TabContentScreen(tab = PipBoyTab.valueOf(tabName))
+            when (val tab = PipBoyTab.valueOf(tabName)) {
+                PipBoyTab.STAT -> StatScreen()
+                else -> PlaceholderTabScreen(tab)
+            }
         }
     }
 }

@@ -141,6 +141,41 @@ Added feature-by-feature as needed, not as a fixed big-bang release:
 - Richer phone integration (weather, calendar) once a fuller phone
   companion app exists beyond the Notes Share-sheet receiver.
 
+## Known Device Limitation: On-Watch Health Connect (found in Phase 2)
+
+On the actual Galaxy Watch6 Classic (SM-R965U, One UI Watch on Android 16),
+`HealthConnectClient.getSdkStatus()` reliably returns `SDK_UNAVAILABLE`.
+Root-caused by walking the `androidx.health.connect:connect-client:1.1.0`
+bytecode and probing the device directly:
+
+- `adb shell service list` shows the raw Binder service is genuinely
+  registered on-device: `healthconnect: [android.health.connect.aidl.IHealthConnectService]`.
+- But `Context.getSystemService("healthconnect")` returns `null` from app
+  code — the OEM framework build isn't wiring that service into
+  `SystemServiceRegistry`, even though the Binder service and the
+  `com.android.healthconnect.controller` settings app both exist and the
+  settings UI opens fine via `android.health.connect.action.HEALTH_HOME_SETTINGS`.
+- On `SDK_INT >= 34`, the connect-client library *always* routes through
+  the platform system service with no app-level override — there is no
+  supported client-side workaround. This is a Samsung Wear OS framework
+  gap, not an app bug, and not something fixable without a hidden-API
+  workaround (deliberately not pursued — fragile, likely blocked by hidden
+  API enforcement, and not worth the maintenance risk for a personal app).
+
+**Implication:** STAT's real health data cannot come directly from the
+watch's own Health Connect today. The app degrades gracefully (a "NO
+SIGNAL" card, per the Non-Goals/error-handling requirement below) rather
+than crashing. The phone paired to this watch almost certainly has working
+Health Connect (phone OEM builds reliably wire up the real
+`com.google.android.apps.healthdata` integration), so **the most likely
+real fix is a phone-side relay** — pulling forward part of the Phase 7
+phone-companion plumbing to also push a daily stats snapshot to the watch,
+rather than reading Health Connect on-watch at all. Left as an open
+decision for whoever picks this back up: revisit after Phase 7's Data
+Layer channel exists, or pull it forward earlier if live STAT data becomes
+a priority sooner. Worth re-testing `isAvailable` after any One UI Watch
+software update in case Samsung patches the framework gap.
+
 ## Permissions Required
 
 - Health Connect (read: steps, heart rate, sleep, exercise)

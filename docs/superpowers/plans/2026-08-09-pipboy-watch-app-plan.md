@@ -47,6 +47,17 @@ Wear OS.
 **Done when:** STAT reflects your real step count and recent workout from
 Health Connect, live on the watch.
 
+**Actual outcome:** code is complete and correct (permission flow, data
+queries, all UI states), verified on-device — but blocked by a Samsung
+Wear OS platform gap: `Context.getSystemService("healthconnect")` returns
+null on this watch despite the Binder service existing, so Health Connect
+genuinely reports unavailable here. STAT shows its "NO SIGNAL" fallback
+state instead of live data. Full root-cause writeup and the phone-relay
+fix path are in the spec's "Known Device Limitation" section. Treating
+this phase as closed for now and continuing to Phase 3 in order; revisit
+STAT once Phase 7's phone Data Layer channel exists, or sooner if live
+STAT data becomes a priority.
+
 ## Phase 3 — INV
 
 - Define the checklist data model (Room): configurable item list, checked

@@ -24,12 +24,11 @@ import com.pipboywatch.app.ui.components.CrtCard
 import com.pipboywatch.app.ui.components.ScanlineOverlay
 
 /**
- * Placeholder content for a tab, entered by tapping it on the home dial.
- * Real STAT/INV/DATA/MAP/RADIO screens replace this body phase by phase;
- * this exists to validate navigation + bezel-scroll-within-a-screen now.
+ * Placeholder content for a tab that doesn't have a real screen yet.
+ * INV/DATA/MAP/RADIO still use this; STAT graduated to StatScreen in Phase 2.
  */
 @Composable
-fun TabContentScreen(tab: PipBoyTab) {
+fun PlaceholderTabScreen(tab: PipBoyTab) {
     val scrollState = rememberScrollState()
     val focusRequester = remember { FocusRequester() }
     val rotaryBehavior = RotaryScrollableDefaults.behavior(scrollableState = scrollState)
