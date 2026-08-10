@@ -2,6 +2,7 @@ package com.pipboywatch.app.perks
 
 import android.content.Context
 import com.pipboywatch.app.health.HealthConnectManager
+import com.pipboywatch.app.health.PhoneStreakCache
 import com.pipboywatch.app.inv.InvRepository
 
 data class Perk(
@@ -24,19 +25,31 @@ class PerksRepository(context: Context) {
     suspend fun computePerks(): List<Perk> {
         val fullyLoaded = invRepository.isFullyChecked()
 
-        val stepStreak = if (!healthManager.isAvailable) {
-            Perk(
-                name = "Step Streak",
-                unlocked = false,
-                detail = "Needs Health Connect — unavailable on this device (see spec)"
-            )
-        } else {
+        val stepStreak = if (healthManager.isAvailable) {
             val unlocked = healthManager.hasStepStreak(days = 7, thresholdSteps = 5000)
             Perk(
                 name = "Step Streak",
                 unlocked = unlocked,
                 detail = if (unlocked) "7 days of 5,000+ steps" else "Keep going — 7-day streak not yet hit"
             )
+        } else {
+            // On-watch Health Connect is unavailable on this hardware (see
+            // HealthConnectManager) — fall back on whatever the STAT tab's
+            // last phone relay found, if any. Opportunistic only: this
+            // doesn't itself trigger a phone request, so it's stale/empty
+            // until STAT has been opened at least once this session.
+            when (val streak = PhoneStreakCache.hasStreak.value) {
+                null -> Perk(
+                    name = "Step Streak",
+                    unlocked = false,
+                    detail = "Needs Health Connect — open STAT once to sync via paired phone"
+                )
+                else -> Perk(
+                    name = "Step Streak",
+                    unlocked = streak,
+                    detail = if (streak) "7 days of 5,000+ steps (via phone)" else "Keep going — 7-day streak not yet hit (via phone)"
+                )
+            }
         }
 
         return listOf(

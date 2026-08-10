@@ -37,4 +37,14 @@ android {
 
 dependencies {
     implementation("com.google.android.gms:play-services-wearable:20.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+
+    // Phone-side Health Connect relay: the watch's own Health Connect access
+    // is broken on this hardware (see wear's HealthConnectManager) — the
+    // phone is the reliable source, so it reads here and pushes a snapshot
+    // to the watch over the Wear Data Layer.
+    implementation("androidx.health.connect:connect-client:1.1.0")
+    implementation("androidx.activity:activity-ktx:1.9.3")
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
 }

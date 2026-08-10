@@ -1,16 +1,19 @@
 package com.pipboywatch.app.ui.tab
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,22 +27,28 @@ import androidx.health.connect.client.PermissionController
 import androidx.wear.compose.foundation.rememberActiveFocusRequester
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
 import androidx.wear.compose.foundation.rotary.rotaryScrollable
-import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.pipboywatch.app.health.HEALTH_PERMISSIONS
 import com.pipboywatch.app.health.HealthConnectManager
+import com.pipboywatch.app.health.PhoneStatRelay
+import com.pipboywatch.app.health.PhoneStatResult
 import com.pipboywatch.app.health.StatSnapshot
 import com.pipboywatch.app.ui.components.CrtCard
 import com.pipboywatch.app.ui.components.ScanlineOverlay
 import com.pipboywatch.app.ui.components.screenContentPadding
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private const val PHONE_RELAY_TIMEOUT_MS = 8000L
 
 private sealed interface StatUiState {
     data object Loading : StatUiState
     data object Unavailable : StatUiState
     data object NeedsPermission : StatUiState
-    data class Loaded(val snapshot: StatSnapshot) : StatUiState
+    data object AwaitingPhone : StatUiState
+    data object PhoneNeedsPermission : StatUiState
+    data class Loaded(val snapshot: StatSnapshot, val viaPhone: Boolean) : StatUiState
 }
 
 @Composable
@@ -54,22 +63,49 @@ fun StatScreen() {
     ) { granted ->
         coroutineScope.launch {
             uiState = if (granted.containsAll(HEALTH_PERMISSIONS)) {
-                StatUiState.Loaded(healthManager.readStatSnapshot())
+                StatUiState.Loaded(healthManager.readStatSnapshot(), viaPhone = false)
             } else {
                 StatUiState.NeedsPermission
             }
         }
     }
 
+    suspend fun tryPhoneRelay() {
+        uiState = StatUiState.AwaitingPhone
+        PhoneStatRelay.clear()
+        PhoneStatRelay.requestFromPhone(context)
+    }
+
     LaunchedEffect(Unit) {
-        if (!healthManager.isAvailable) {
-            uiState = StatUiState.Unavailable
-            return@LaunchedEffect
-        }
-        uiState = if (healthManager.hasAllPermissions()) {
-            StatUiState.Loaded(healthManager.readStatSnapshot())
+        if (healthManager.isAvailable) {
+            uiState = if (healthManager.hasAllPermissions()) {
+                StatUiState.Loaded(healthManager.readStatSnapshot(), viaPhone = false)
+            } else {
+                StatUiState.NeedsPermission
+            }
         } else {
-            StatUiState.NeedsPermission
+            // On-watch Health Connect is unavailable on this hardware — ask
+            // the paired phone for a snapshot instead (see PhoneStatRelay).
+            tryPhoneRelay()
+        }
+    }
+
+    val phoneResult by PhoneStatRelay.result.collectAsState()
+    LaunchedEffect(phoneResult) {
+        when (val result = phoneResult) {
+            null -> Unit
+            is PhoneStatResult.Success -> uiState = StatUiState.Loaded(result.snapshot, viaPhone = true)
+            PhoneStatResult.NeedsPermission -> uiState = StatUiState.PhoneNeedsPermission
+            PhoneStatResult.Unavailable -> uiState = StatUiState.Unavailable
+        }
+    }
+
+    // If the phone never replies (not connected, app not installed there
+    // yet, etc.), don't hang on "AWAITING PHONE" forever.
+    LaunchedEffect(uiState) {
+        if (uiState == StatUiState.AwaitingPhone) {
+            delay(PHONE_RELAY_TIMEOUT_MS)
+            if (uiState == StatUiState.AwaitingPhone) uiState = StatUiState.Unavailable
         }
     }
 
@@ -94,14 +130,36 @@ fun StatScreen() {
 
             when (val state = uiState) {
                 is StatUiState.Loading -> LoadingCard()
-                is StatUiState.Unavailable -> UnavailableCard()
+                is StatUiState.AwaitingPhone -> AwaitingPhoneCard()
+                is StatUiState.PhoneNeedsPermission -> PhoneNeedsPermissionCard {
+                    coroutineScope.launch { tryPhoneRelay() }
+                }
+                is StatUiState.Unavailable -> UnavailableCard {
+                    coroutineScope.launch { tryPhoneRelay() }
+                }
                 is StatUiState.NeedsPermission -> NeedsPermissionCard {
                     permissionLauncher.launch(HEALTH_PERMISSIONS)
                 }
-                is StatUiState.Loaded -> LoadedStats(state.snapshot)
+                is StatUiState.Loaded -> LoadedStats(state.snapshot, state.viaPhone)
             }
         }
         ScanlineOverlay()
+    }
+}
+
+/** Full-width tappable terminal row — same fix as RADIO's TransportRow:
+ * Wear Compose's Button defaults to a small circular icon shape that wraps
+ * short text mid-word ("GRAN"/"T"), so plain-text actions use a CrtCard
+ * row instead. */
+@Composable
+private fun TerminalActionRow(label: String, onClick: () -> Unit) {
+    CrtCard(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Text(
+            text = label,
+            color = MaterialTheme.colors.primary,
+            style = MaterialTheme.typography.body2,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -111,14 +169,41 @@ private fun LoadingCard() {
 }
 
 @Composable
-private fun UnavailableCard() {
-    CrtCard(title = "NO SIGNAL") {
+private fun AwaitingPhoneCard() {
+    CrtCard(title = "SYNCING") {
         Text(
-            "Health Connect isn't available on this device.",
+            "Watch Health Connect unavailable — asking paired phone for today's stats...",
             color = MaterialTheme.colors.primary,
             style = MaterialTheme.typography.body2
         )
     }
+}
+
+@Composable
+private fun PhoneNeedsPermissionCard(onRetry: () -> Unit) {
+    CrtCard(title = "ACCESS REQUIRED") {
+        Text(
+            "Open the Pip-Boy Companion app on your phone and grant Health Connect access there.",
+            color = MaterialTheme.colors.primary,
+            style = MaterialTheme.typography.body2
+        )
+    }
+    Spacer(Modifier.height(8.dp))
+    TerminalActionRow("RETRY") { onRetry() }
+}
+
+@Composable
+private fun UnavailableCard(onRetry: () -> Unit) {
+    CrtCard(title = "NO SIGNAL") {
+        Text(
+            "Health Connect isn't available on this device, and no paired phone answered either. " +
+                "Make sure the Pip-Boy Companion app is installed and reachable on your phone.",
+            color = MaterialTheme.colors.primary,
+            style = MaterialTheme.typography.body2
+        )
+    }
+    Spacer(Modifier.height(8.dp))
+    TerminalActionRow("RETRY") { onRetry() }
 }
 
 @Composable
@@ -129,15 +214,21 @@ private fun NeedsPermissionCard(onGrant: () -> Unit) {
             color = MaterialTheme.colors.primary,
             style = MaterialTheme.typography.body2
         )
-        Spacer(Modifier.height(8.dp))
-        Button(onClick = onGrant) {
-            Text("GRANT")
-        }
     }
+    Spacer(Modifier.height(8.dp))
+    TerminalActionRow("GRANT") { onGrant() }
 }
 
 @Composable
-private fun LoadedStats(snapshot: StatSnapshot) {
+private fun LoadedStats(snapshot: StatSnapshot, viaPhone: Boolean) {
+    if (viaPhone) {
+        Text(
+            "(via paired phone)",
+            color = MaterialTheme.colors.primary.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.caption2
+        )
+        Spacer(Modifier.height(8.dp))
+    }
     CrtCard(title = "STEPS TODAY") {
         Text("${snapshot.steps}", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.title3)
     }

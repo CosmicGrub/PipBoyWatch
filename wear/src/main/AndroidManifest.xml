@@ -70,10 +70,20 @@
             </intent-filter>
         </service>
 
-        <!-- Notes: receives phone-relayed notes over the Wear Data Layer.
-             Nothing sends to this until Phase 7 builds the phone sender. -->
+        <!-- Notes: receives phone-relayed notes over the Wear Data Layer. -->
         <service
             android:name=".data.notes.PipBoyMessageListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+            </intent-filter>
+        </service>
+
+        <!-- STAT: receives the phone's Health Connect snapshot reply, since
+             the watch can't read Health Connect on this hardware (see
+             HealthConnectManager). -->
+        <service
+            android:name=".data.health.StatMessageListenerService"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
