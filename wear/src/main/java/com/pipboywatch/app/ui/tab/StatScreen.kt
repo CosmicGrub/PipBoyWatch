@@ -32,6 +32,7 @@ import com.pipboywatch.app.health.HealthConnectManager
 import com.pipboywatch.app.health.StatSnapshot
 import com.pipboywatch.app.ui.components.CrtCard
 import com.pipboywatch.app.ui.components.ScanlineOverlay
+import com.pipboywatch.app.ui.components.screenContentPadding
 import kotlinx.coroutines.launch
 
 private sealed interface StatUiState {
@@ -85,7 +86,7 @@ fun StatScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(top = 28.dp, bottom = 24.dp, start = 12.dp, end = 12.dp),
+                .padding(screenContentPadding()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(text = "STAT", style = MaterialTheme.typography.title2, color = MaterialTheme.colors.primary)

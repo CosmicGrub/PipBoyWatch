@@ -45,6 +45,7 @@ import com.pipboywatch.app.quest.QuestRepository
 import com.pipboywatch.app.ui.components.CrtCard
 import com.pipboywatch.app.ui.components.ScanlineOverlay
 import com.pipboywatch.app.ui.components.rememberTextInputLauncher
+import com.pipboywatch.app.ui.components.screenContentPadding
 import kotlinx.coroutines.launch
 
 @Composable
@@ -88,7 +89,7 @@ fun DataScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(top = 28.dp, bottom = 24.dp, start = 12.dp, end = 12.dp),
+                .padding(screenContentPadding()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(text = "DATA", style = MaterialTheme.typography.title2, color = MaterialTheme.colors.primary)

@@ -39,6 +39,7 @@ import com.pipboywatch.app.holotape.HolotapeRepository
 import com.pipboywatch.app.media.MediaSessionHolder
 import com.pipboywatch.app.ui.components.CrtCard
 import com.pipboywatch.app.ui.components.ScanlineOverlay
+import com.pipboywatch.app.ui.components.screenContentPadding
 
 @Composable
 fun RadioScreen() {
@@ -91,7 +92,7 @@ fun RadioScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(top = 28.dp, bottom = 24.dp, start = 12.dp, end = 12.dp),
+                .padding(screenContentPadding()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(text = "RADIO", style = MaterialTheme.typography.title2, color = MaterialTheme.colors.primary)

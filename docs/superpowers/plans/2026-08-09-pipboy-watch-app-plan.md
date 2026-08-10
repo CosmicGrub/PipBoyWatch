@@ -286,17 +286,32 @@ Share sheet, relaying the shared text to every connected watch node over
    before the OS actually displayed the toast (`Toast already killed` in
    logcat). Fixed with a short `Handler.postDelayed` before finishing.
 
-**Still unresolved:** even after the applicationId fix (verified via
-matching `apksigner` certificate output on both APKs) and a forced
-Google Play Services restart on the watch, message delivery still failed
-with the same `Failed to deliver message to AppKey` error. Notably, the
-exact same failure was observed for several of *Samsung's own* first-
-party system capabilities immediately after the GMS restart — strong
-evidence this is watch-side Play Services flakiness on this specific
-device/session, not something wrong with our app's code or manifest
-(independently confirmed correct via `dumpsys package`). Session also
-lost the wifi ADB connection to the watch multiple times during this
-phase, adding friction to isolating the issue further.
+**Still unresolved (Phase 8 update):** re-tested with both devices
+freshly, cleanly connected — no recent GMS restart, no stale caches —
+and delivery still didn't succeed (this time with no logged error at
+all on either side, not even the earlier `Failed to deliver` warning,
+ruling out the "just GMS restart noise" theory from the initial Phase 7
+finding). Also checked the phone's Galaxy Wearable app directly (Watch
+settings → Notifications → App notifications) on the theory that
+Samsung's own companion app might hold the real grant: our sideloaded
+app doesn't appear in that list at all (only Galaxy Store-installed
+watch apps do), and that screen turned out to control Samsung's own
+notification-mirroring feature anyway — a different thing entirely from
+the Android `NotificationListenerService` permission RADIO/Holotapes
+need, and from the Wear Data Layer `MessageClient` routing Notes needs.
+Both are now confirmed dead ends specifically for a sideloaded
+(non-Galaxy-Store) app on this device.
+
+Root cause remains unconfirmed after applicationId match, signing
+cert match (verified via apksigner), correct manifest registration
+(verified via dumpsys package), a GMS restart, and multiple clean
+retries. This now reads as a real platform limitation for sideloaded
+apps on this specific Samsung Wear OS build, not a one-off flake —
+consistent with the pattern already seen twice elsewhere (Health
+Connect in Phase 2, notification-listener access in Phase 4/6). Further
+progress likely needs either Samsung/Google developer support channels
+or a real Galaxy Store listing to test against, both outside this
+session's reach.
 
 Diagnostic logging (`Log.d("PipBoyNotes", ...)` on both the phone send
 path and the watch's `onMessageReceived`) was added specifically to make
@@ -316,6 +331,61 @@ restarted, to rule the flakiness theory in or out cleanly.
 **Done when:** a clean install → grant permissions → use all five tabs →
 no crashes, no permanently-blank screens, acceptable battery drain over a
 normal day of wear.
+
+**Actual outcome:**
+
+- **Visual polish (round-safe padding):** the round-screen content
+  clipping visible in screenshots since Phase 1 is fixed. Added
+  `screenContentPadding()` (checks `LocalConfiguration.isScreenRound`,
+  applies extra top/bottom/side margin on round screens) and applied it
+  across all six screen files, replacing six copies of a hardcoded
+  padding value. Verified on-device: STAT's title now has real clearance
+  from the top edge, and DATA's last row ("+ ADD NOTE") is no longer
+  clipped at the bottom — both previously cut off. (Mid-scroll clipping
+  of a card transitioning past the curved edge is expected/inherent to
+  round-screen scrolling and unrelated to this fix — it resolves once
+  scrolling settles.)
+- **Permission-denial walkthrough:** revoked `ACCESS_FINE_LOCATION` via
+  `pm revoke`, force-stopped, and relaunched fresh — MAP correctly fell
+  back to its "ACCESS REQUIRED" gate with no crash, confirming the
+  `ContextCompat.checkSelfPermission`-gated pattern used throughout the
+  app holds up under an actual revoked-permission condition, not just
+  a first-ever-launch one. Holotapes/RADIO's notification-access-denied
+  path has effectively been exercised continuously since Phase 4 (access
+  was never successfully granted on this device across the whole
+  project) and never crashed either.
+- **Further investigated the Phase 4/6/7 permission/routing gaps:**
+  checked the phone's Galaxy Wearable companion app directly (Watch
+  settings → Notifications → App notifications) on the theory it might
+  hold the real grant for notification-listener access. Confirmed dead
+  end: our sideloaded app doesn't appear in that list at all (only
+  Galaxy Store-installed watch apps do), and the screen turned out to
+  control a different feature entirely (Samsung's own notification-
+  mirroring, not Android's `NotificationListenerService` permission).
+  Also re-tested Phase 7's note delivery with both devices freshly,
+  cleanly connected (no recent restart, no stale cache) — still didn't
+  succeed, ruling out the "just GMS restart noise" read from Phase 7
+  and pointing at a real platform limitation for sideloaded apps on this
+  device rather than a transient flake. See the Phase 7 outcome note
+  above for the full, updated picture.
+- **Battery check:** honestly could not be tested as "a normal day of
+  wear" — this session's own testing was unusually battery-intensive
+  (screen held on for hours, wifi ADB connected continuously, GPS/
+  sensors repeatedly exercised on purpose for verification), so the
+  observed ~60-point drain over the session isn't a fair proxy for real
+  usage. Did confirm no evidence of a stuck background location request
+  (`dumpsys location` history is consistent with tracking only while
+  MAP was actively open, matching the `DisposableEffect` teardown
+  design) — the main structural battery risk was ruled out, even though
+  a true multi-hour real-world reading wasn't obtained.
+
+**Not done from the original scope:** a from-scratch clean install (old
+Room data wiped, permissions never previously granted) wasn't performed
+this phase — testing built on top of the app's accumulated state across
+Phases 0-7. The individual pieces (fresh permission grant flows, no-data
+states) have each been verified at some point across the project, but
+not all together in one true clean-install pass. Worth doing before
+calling v1 fully done.
 
 ## Deferred to Post-v1 (per spec roadmap)
 

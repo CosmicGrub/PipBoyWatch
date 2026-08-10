@@ -31,6 +31,7 @@ import com.pipboywatch.app.data.InvItemEntity
 import com.pipboywatch.app.inv.InvRepository
 import com.pipboywatch.app.ui.components.CrtCard
 import com.pipboywatch.app.ui.components.ScanlineOverlay
+import com.pipboywatch.app.ui.components.screenContentPadding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -67,7 +68,7 @@ fun InvScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(top = 28.dp, bottom = 24.dp, start = 12.dp, end = 12.dp),
+                .padding(screenContentPadding()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(text = "INV", style = MaterialTheme.typography.title2, color = MaterialTheme.colors.primary)

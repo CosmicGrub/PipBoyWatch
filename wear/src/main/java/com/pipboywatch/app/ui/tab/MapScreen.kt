@@ -43,6 +43,7 @@ import com.pipboywatch.app.map.formatPace
 import com.pipboywatch.app.map.paceSecondsPerKm
 import com.pipboywatch.app.ui.components.CrtCard
 import com.pipboywatch.app.ui.components.ScanlineOverlay
+import com.pipboywatch.app.ui.components.screenContentPadding
 import kotlinx.coroutines.launch
 
 @Composable
@@ -90,7 +91,7 @@ fun MapScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(top = 28.dp, bottom = 24.dp, start = 12.dp, end = 12.dp),
+                .padding(screenContentPadding()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(text = "MAP", style = MaterialTheme.typography.title2, color = MaterialTheme.colors.primary)

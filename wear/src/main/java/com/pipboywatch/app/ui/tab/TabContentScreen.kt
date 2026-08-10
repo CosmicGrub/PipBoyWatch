@@ -20,6 +20,7 @@ import androidx.wear.compose.material.Text
 import com.pipboywatch.app.ui.PipBoyTab
 import com.pipboywatch.app.ui.components.CrtCard
 import com.pipboywatch.app.ui.components.ScanlineOverlay
+import com.pipboywatch.app.ui.components.screenContentPadding
 
 /**
  * Placeholder content for a tab that doesn't have a real screen yet.
@@ -40,7 +41,7 @@ fun PlaceholderTabScreen(tab: PipBoyTab) {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(top = 28.dp, bottom = 24.dp, start = 12.dp, end = 12.dp),
+                .padding(screenContentPadding()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
