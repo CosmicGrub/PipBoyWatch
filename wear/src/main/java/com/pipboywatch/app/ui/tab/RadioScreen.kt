@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.rememberActiveFocusRequester
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
 import androidx.wear.compose.foundation.rotary.rotaryScrollable
-import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.pipboywatch.app.holotape.HolotapeRepository
@@ -115,7 +114,7 @@ fun RadioScreen() {
                                 style = MaterialTheme.typography.caption2
                             )
                         } else {
-                            Button(onClick = {
+                            TransportRow("GRANT") {
                                 try {
                                     context.startActivity(
                                         Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
@@ -124,8 +123,6 @@ fun RadioScreen() {
                                 } catch (e: ActivityNotFoundException) {
                                     settingsUnavailable = true
                                 }
-                            }) {
-                                Text("GRANT")
                             }
                         }
                     }
