@@ -37,8 +37,10 @@ private fun RationaleScreen() {
     Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
         Text(
             text = "Pip-Boy reads steps, heart rate, sleep, and workout data " +
-                "from Health Connect to show on the STAT tab. This data stays " +
-                "on your watch and is never transmitted anywhere.",
+                "from Health Connect to show on the STAT tab. If this watch's " +
+                "own Health Connect is unavailable, the same data is relayed " +
+                "from your paired phone instead. Either way, it goes only " +
+                "between your own watch and phone and nowhere else.",
             modifier = Modifier.verticalScroll(rememberScrollState()),
             color = MaterialTheme.colors.primary,
             style = MaterialTheme.typography.body2,

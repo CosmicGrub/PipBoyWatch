@@ -1,13 +1,16 @@
 package com.pipboywatch.app.map
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
 import android.os.Looper
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -109,9 +112,25 @@ class RunTracker(context: Context) {
         override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) = Unit
     }
 
-    /** Caller must have already confirmed ACCESS_FINE_LOCATION at runtime. */
+    /** Whether the last start() actually had Body Sensors permission to turn
+     * on the heart-rate listener — MapScreen uses this to tell the user HR
+     * won't be recorded rather than just silently showing "--". */
+    var heartRateEnabledThisRun: Boolean = false
+        private set
+
+    /** Caller must have already confirmed ACCESS_FINE_LOCATION at runtime.
+     * BODY_SENSORS is checked live here (not trusted from the caller) since
+     * it's requested alongside location but can be independently denied —
+     * or revoked later via system Settings without an app restart — and
+     * registering the heart-rate listener without it throws SecurityException. */
     @SuppressLint("MissingPermission")
     fun start() {
+        // Cancel any previous run's ticker before starting a new one — a
+        // double-tap on START RUN before Compose recomposes past the button
+        // would otherwise leak an extra unstructured 1Hz ticker forever,
+        // surviving even a later stop().
+        tickerJob?.cancel()
+
         startTimeMillis = System.currentTimeMillis()
         distanceMeters = 0.0
         elevationGainMeters = 0.0
@@ -124,7 +143,14 @@ class RunTracker(context: Context) {
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3_000L).build()
         fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
         pressureSensor?.let { sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL) }
-        heartRateSensor?.let { sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL) }
+
+        val hasBodySensorsPermission = ContextCompat.checkSelfPermission(
+            appContext, Manifest.permission.BODY_SENSORS
+        ) == PackageManager.PERMISSION_GRANTED
+        heartRateEnabledThisRun = hasBodySensorsPermission && heartRateSensor != null
+        if (hasBodySensorsPermission) {
+            heartRateSensor?.let { sensorManager.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL) }
+        }
 
         tickerJob = CoroutineScope(Dispatchers.Main).launch {
             while (isActive) {

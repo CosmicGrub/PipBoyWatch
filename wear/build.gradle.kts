@@ -56,6 +56,14 @@ dependencies {
     implementation("androidx.room:room-ktx:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
 
+    // Room's DB holds GPS routes, heart rate, free-text notes, and mirrored
+    // notification content — SQLCipher encrypts the on-disk file; the
+    // passphrase itself is generated and Keystore-wrapped via security-crypto
+    // (see DatabasePassphrase.kt), never hardcoded.
+    implementation("net.zetetic:android-database-sqlcipher:4.5.4")
+    implementation("androidx.sqlite:sqlite:2.4.0")
+    implementation("androidx.security:security-crypto:1.1.0")
+
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     implementation("com.google.android.gms:play-services-wearable:20.0.1")

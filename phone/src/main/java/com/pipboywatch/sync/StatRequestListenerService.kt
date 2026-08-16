@@ -7,7 +7,9 @@ import com.google.android.gms.wearable.WearableListenerService
 import com.pipboywatch.health.HealthConnectManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 private const val TAG = "PipBoyStatSync"
 
@@ -29,6 +31,16 @@ class StatRequestListenerService : WearableListenerService() {
 
         val sourceNodeId = messageEvent.sourceNodeId
         serviceScope.launch {
+            // The Wear Data Layer's AppKey routing already restricts
+            // delivery to apps sharing this app's package+signature, but
+            // that's weaker on a debug-signed build than a real release
+            // key — this is a cheap extra check that the request actually
+            // came from a currently-connected paired node before we hand
+            // it real Health Connect data.
+            if (!isFromTrustedNode(sourceNodeId)) {
+                Log.w(TAG, "Ignoring stat request from untrusted node $sourceNodeId")
+                return@launch
+            }
             val payload = when {
                 !healthManager.isAvailable -> "UNAVAILABLE"
                 !healthManager.hasAllPermissions() -> "NEEDS_PERMISSION"
@@ -39,6 +51,20 @@ class StatRequestListenerService : WearableListenerService() {
                 .addOnCompleteListener { result ->
                     Log.d(TAG, "reply isSuccessful=${result.isSuccessful} exception=${result.exception}")
                 }
+        }
+    }
+
+    override fun onDestroy() {
+        serviceScope.cancel()
+        super.onDestroy()
+    }
+
+    private suspend fun isFromTrustedNode(sourceNodeId: String): Boolean {
+        return try {
+            Wearable.getNodeClient(applicationContext).connectedNodes.await().any { it.id == sourceNodeId }
+        } catch (e: Exception) {
+            Log.d(TAG, "isFromTrustedNode check failed", e)
+            false
         }
     }
 }

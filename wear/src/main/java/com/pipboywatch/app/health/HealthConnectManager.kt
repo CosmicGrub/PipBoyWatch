@@ -35,7 +35,15 @@ data class StatSnapshot(
     val activeMinutes: Long,
     val latestHeartRateBpm: Long?,
     val sleepMinutesLastNight: Long,
-    val recentWorkouts: List<WorkoutSummary>
+    val recentWorkouts: List<WorkoutSummary>,
+    // Null when not computed for this snapshot (the on-watch path below
+    // still computes Step Streak separately via hasStepStreak(), since
+    // StatScreen doesn't need it just to display steps/HR/sleep and it's
+    // an extra 7-day aggregate query not worth doing on every STAT load).
+    // The phone-relay path (PhoneStatRelay.kt) always populates a real
+    // value here — this field exists specifically so that path has
+    // somewhere to put it instead of a separate side-channel object.
+    val hasStepStreak: Boolean? = null
 )
 
 /** Thin wrapper around HealthConnectClient — read-only queries for the STAT tab. */

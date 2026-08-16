@@ -64,6 +64,14 @@ fun MapScreen() {
         )
     }
 
+    // Body Sensors is requested alongside location but can be independently
+    // denied (or later revoked via system Settings) — location is the only
+    // hard requirement for MAP, so a denial degrades to "no heart rate this
+    // run" rather than blocking the whole tab. We don't need to track the
+    // grant result ourselves here: RunTracker checks it live on every
+    // start() (see heartRateEnabledThisRun below), which is more accurate
+    // than caching it in this screen's state (handles a mid-session revoke
+    // without an app restart).
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
@@ -116,7 +124,7 @@ fun MapScreen() {
                     }
                 }
                 isTracking -> {
-                    LiveRunCard(liveStats)
+                    LiveRunCard(liveStats, heartRateEnabled = runTracker.heartRateEnabledThisRun)
                     Spacer(Modifier.height(8.dp))
                     ActionRow("STOP RUN") {
                         val completed = runTracker.stop()
@@ -179,7 +187,7 @@ private fun ActionRow(label: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun LiveRunCard(stats: RunLiveStats?) {
+private fun LiveRunCard(stats: RunLiveStats?, heartRateEnabled: Boolean) {
     CrtCard(title = "TRACKING") {
         Text("Time: ${formatElapsed(stats?.elapsedSeconds ?: 0)}", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2)
         Text(
@@ -192,11 +200,19 @@ private fun LiveRunCard(stats: RunLiveStats?) {
             color = MaterialTheme.colors.primary,
             style = MaterialTheme.typography.body2
         )
-        Text(
-            "HR: ${stats?.currentHeartRateBpm?.let { "$it bpm" } ?: "--"}",
-            color = MaterialTheme.colors.primary,
-            style = MaterialTheme.typography.body2
-        )
+        if (heartRateEnabled) {
+            Text(
+                "HR: ${stats?.currentHeartRateBpm?.let { "$it bpm" } ?: "--"}",
+                color = MaterialTheme.colors.primary,
+                style = MaterialTheme.typography.body2
+            )
+        } else {
+            Text(
+                "HR: unavailable (grant Body Sensors)",
+                color = MaterialTheme.colors.primary.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.caption1
+            )
+        }
         Text(
             "Climb: %.0f m".format(stats?.elevationGainMeters ?: 0.0),
             color = MaterialTheme.colors.primary,

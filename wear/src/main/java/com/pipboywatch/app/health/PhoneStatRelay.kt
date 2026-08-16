@@ -90,31 +90,14 @@ private fun decodeStatSnapshot(payload: String): PhoneStatResult {
         }
         ?: emptyList()
 
-    // hasStreak isn't part of StatSnapshot's shape (that struct is shared
-    // with the on-watch HealthConnectManager, which has no streak field) —
-    // carry it via the tiny side-channel below instead.
-    PhoneStreakCache.update(hasStreak)
-
     return PhoneStatResult.Success(
         StatSnapshot(
             steps = steps,
             activeMinutes = activeMinutes,
             latestHeartRateBpm = heartRate,
             sleepMinutesLastNight = sleepMinutes,
-            recentWorkouts = workouts
+            recentWorkouts = workouts,
+            hasStepStreak = hasStreak
         )
     )
-}
-
-/** Perks' Step Streak check is a fallback consumer of the same relay
- * response — kept as a tiny separate cache rather than widening
- * StatSnapshot (which is also the on-watch HealthConnectManager's shape,
- * and that source has no equivalent "streak" field to carry it in). */
-object PhoneStreakCache {
-    private val _hasStreak = MutableStateFlow<Boolean?>(null)
-    val hasStreak: StateFlow<Boolean?> = _hasStreak.asStateFlow()
-
-    fun update(value: Boolean) {
-        _hasStreak.value = value
-    }
 }
