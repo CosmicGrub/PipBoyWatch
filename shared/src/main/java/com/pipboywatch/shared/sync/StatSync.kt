@@ -3,6 +3,7 @@ package com.pipboywatch.shared.sync
 import com.pipboywatch.shared.health.StatSnapshot
 import com.pipboywatch.shared.health.WorkoutSummary
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Wire paths and encoding for the phone -> watch STAT relay. The watch
@@ -31,12 +32,15 @@ const val STAT_RESPONSE_PATH = "/pipboy/stat"
 
 /** Not a security token, just a collision-resistant-enough tag for
  * matching a reply to the request that triggered it within one process's
- * lifetime — timestamp+counter is plenty. */
-private var requestCounter = 0
+ * lifetime — timestamp+counter is plenty. Atomic because
+ * PendingRequestTracker calls this once per channel per mint(), and
+ * different channels' requests can legitimately be minted from different
+ * threads at once — a plain var here would let two concurrent increments
+ * race and collide on the same id. */
+private val requestCounter = AtomicInteger(0)
 
 fun newRequestId(): String {
-    requestCounter += 1
-    return "${System.currentTimeMillis()}-$requestCounter"
+    return "${System.currentTimeMillis()}-${requestCounter.incrementAndGet()}"
 }
 
 fun encodeStatSnapshot(snapshot: StatSnapshot): String {

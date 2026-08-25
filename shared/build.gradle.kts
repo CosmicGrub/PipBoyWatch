@@ -17,6 +17,18 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    testOptions {
+        unitTests {
+            // PendingRequestTracker logs a couple of diagnostic lines via
+            // android.util.Log on its stale-reply/expiry paths. Without
+            // this, Android's unmocked Log throws "Method d ... not
+            // mocked" in a plain JVM unit test — this is the standard,
+            // dependency-free fix (vs. pulling in Robolectric just to
+            // stub two log lines).
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {

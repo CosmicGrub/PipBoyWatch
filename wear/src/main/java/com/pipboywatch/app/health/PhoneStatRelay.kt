@@ -3,17 +3,28 @@ package com.pipboywatch.app.health
 import android.content.Context
 import android.util.Log
 import com.google.android.gms.wearable.Wearable
+import com.pipboywatch.shared.sync.PendingRequestTracker
 import com.pipboywatch.shared.sync.STAT_REQUEST_PATH
 import com.pipboywatch.shared.sync.StatDecodeResult
 import com.pipboywatch.shared.sync.decodeStatReply
-import com.pipboywatch.shared.sync.newRequestId
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 private const val TAG = "PipBoyStatSync"
+private const val CHANNEL = "stat"
+
+/** How long to wait for the phone's reply before treating the request as
+ * abandoned. This transport has already been observed to silently drop
+ * messages outright (see PhoneStatRelay's own commit history) — without
+ * this, that failure mode left the STAT screen showing "SYNCING" forever
+ * instead of ever settling on Unavailable. */
+private const val REPLY_TIMEOUT_MILLIS = 20_000L
 
 /**
  * Shared holder so StatMessageListenerService (receives the phone's reply)
@@ -23,43 +34,61 @@ private const val TAG = "PipBoyStatSync"
  * com.pipboywatch.shared.sync.StatSync) — this object is purely the
  * wear-side request/response state holder, not the protocol itself.
  *
- * Tracks the outstanding request's id so a stale reply — e.g. from a
- * request the user retried past, or from a prior STAT screen visit whose
- * reply arrived late — can't be mistaken for the answer to a fresher
- * request. An empty-id reply (the phone's "Sync to Watch Now" button,
- * which isn't answering any specific request) is always accepted.
+ * Request correlation itself — rejecting a stale reply from a request the
+ * user retried past, or from a prior STAT screen visit whose reply
+ * arrived late, while always accepting an empty-id unsolicited push —
+ * is delegated to PendingRequestTracker rather than owned here; this
+ * object is now just STAT's one-channel wiring around it (see
+ * shared/.../sync/PendingRequestTracker.kt for why that got pulled out).
  */
 object PhoneStatRelay {
-    private val _result = MutableStateFlow<StatDecodeResult?>(null)
-    val result: StateFlow<StatDecodeResult?> = _result.asStateFlow()
+    private val tracker = PendingRequestTracker<StatDecodeResult>()
+    val result: StateFlow<StatDecodeResult?> = tracker.observe(CHANNEL)
 
-    @Volatile private var outstandingRequestId: String? = null
+    // onResponseReceived runs on whatever background thread the Wearable
+    // Data Layer delivers messages on, not necessarily the same thread
+    // requestFromPhone's coroutine runs its cancellation on — @Volatile
+    // for cross-thread visibility of the reference itself (Job.cancel()
+    // is already safe to call from any thread on its own).
+    @Volatile private var timeoutJob: Job? = null
 
     fun clear() {
-        _result.value = null
-        outstandingRequestId = null
+        timeoutJob?.cancel()
+        tracker.clear(CHANNEL)
     }
 
     fun onResponseReceived(payload: String) {
         val reply = decodeStatReply(payload)
-        Log.d(TAG, "onResponseReceived requestId=${reply.requestId} outstanding=$outstandingRequestId")
-        if (reply.requestId.isNotEmpty() && reply.requestId != outstandingRequestId) {
-            Log.d(TAG, "Dropping stale stat reply for ${reply.requestId}")
-            return
+        Log.d(TAG, "onResponseReceived requestId=${reply.requestId}")
+        // Only cancel the pending timeout if this reply was actually
+        // accepted — a stale/mismatched reply (complete() returning
+        // false) shouldn't cancel the timeout still watching the real
+        // outstanding request.
+        if (tracker.complete(CHANNEL, reply.requestId, reply.result)) {
+            timeoutJob?.cancel()
         }
-        _result.value = reply.result
     }
 
     /** Pings every connected phone node; the reply (if any) arrives later
-     * via StatMessageListenerService -> onResponseReceived. */
+     * via StatMessageListenerService -> onResponseReceived. If nothing
+     * answers within REPLY_TIMEOUT_MILLIS, settles on Unavailable instead
+     * of leaving observers waiting indefinitely. */
     suspend fun requestFromPhone(context: Context) {
-        val requestId = newRequestId()
-        outstandingRequestId = requestId
+        val requestId = tracker.mint(CHANNEL, REPLY_TIMEOUT_MILLIS)
+        timeoutJob?.cancel()
+        timeoutJob = CoroutineScope(Dispatchers.Default).launch {
+            delay(REPLY_TIMEOUT_MILLIS)
+            if (tracker.expireStale(System.currentTimeMillis()).contains(CHANNEL)) {
+                Log.d(TAG, "requestFromPhone id=$requestId timed out waiting for a reply")
+                tracker.complete(CHANNEL, "", StatDecodeResult.Unavailable)
+            }
+        }
         try {
             val nodes = Wearable.getNodeClient(context).connectedNodes.await()
             Log.d(TAG, "requestFromPhone id=$requestId nodes=${nodes.map { "${it.displayName}(${it.id}, nearby=${it.isNearby})" }}")
             if (nodes.isEmpty()) {
-                _result.value = StatDecodeResult.Unavailable
+                timeoutJob?.cancel()
+                tracker.complete(CHANNEL, requestId, StatDecodeResult.Unavailable)
                 return
             }
             val messageClient = Wearable.getMessageClient(context)
@@ -73,7 +102,8 @@ object PhoneStatRelay {
             throw e
         } catch (e: Exception) {
             Log.d(TAG, "requestFromPhone failed", e)
-            _result.value = StatDecodeResult.Unavailable
+            timeoutJob?.cancel()
+            tracker.complete(CHANNEL, requestId, StatDecodeResult.Unavailable)
         }
     }
 }
