@@ -6,6 +6,7 @@ import com.pipboywatch.app.data.InvItemDao
 import com.pipboywatch.app.data.InvItemEntity
 import com.pipboywatch.app.data.PipBoyDatabase
 import com.pipboywatch.app.data.SettingsStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -64,6 +65,8 @@ class InvRepository(context: Context) {
         val phoneItem = dao.getSystemLinkedItem() ?: return
         val connected = try {
             nodeClient.connectedNodes.await().isNotEmpty()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             false
         }

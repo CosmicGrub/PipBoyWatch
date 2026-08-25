@@ -7,11 +7,11 @@ import android.media.session.MediaSession
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import com.pipboywatch.app.data.HolotapeEntity
-import com.pipboywatch.app.data.PipBoyDatabase
+import com.pipboywatch.app.holotape.HolotapeRepository
 import com.pipboywatch.app.media.MediaSessionHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
  */
 class PipBoyNotificationListenerService : NotificationListenerService() {
     private val serviceScope = CoroutineScope(Dispatchers.IO)
+    private val holotapeRepository by lazy { HolotapeRepository(applicationContext) }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
@@ -65,7 +66,6 @@ class PipBoyNotificationListenerService : NotificationListenerService() {
         val extras = sbn.notification.extras
         val title = extras.getCharSequence("android.title")?.toString().orEmpty()
         val text = extras.getCharSequence("android.text")?.toString().orEmpty()
-        if (title.isBlank() && text.isBlank()) return // nothing worth logging
 
         val appLabel = try {
             val pm = packageManager
@@ -75,16 +75,12 @@ class PipBoyNotificationListenerService : NotificationListenerService() {
         }
 
         serviceScope.launch {
-            val dao = PipBoyDatabase.getInstance(applicationContext).holotapeDao()
-            dao.insert(
-                HolotapeEntity(
-                    appLabel = appLabel,
-                    title = title,
-                    text = text,
-                    postedAt = sbn.postTime
-                )
-            )
-            dao.trimOldEntries()
+            holotapeRepository.logNotification(appLabel, title, text, sbn.postTime)
         }
+    }
+
+    override fun onDestroy() {
+        serviceScope.cancel()
+        super.onDestroy()
     }
 }

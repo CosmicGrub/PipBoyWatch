@@ -11,6 +11,8 @@ import android.hardware.SensorManager
 import android.location.Location
 import android.os.Looper
 import androidx.core.content.ContextCompat
+import com.pipboywatch.app.data.RunCheckpoint
+import com.pipboywatch.app.data.SettingsStore
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -57,6 +59,7 @@ class RunTracker(context: Context) {
     private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val pressureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
     private val heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE)
+    private val settings = SettingsStore(appContext)
 
     val hasBarometer: Boolean get() = pressureSensor != null
     val hasHeartRateSensor: Boolean get() = heartRateSensor != null
@@ -153,8 +156,30 @@ class RunTracker(context: Context) {
         }
 
         tickerJob = CoroutineScope(Dispatchers.Main).launch {
+            var ticksSinceCheckpoint = 0
             while (isActive) {
                 publish()
+                // Checkpoint every ~10s, not every tick — DataStore writes
+                // are cheap but there's no reason to do one a second. This
+                // is a process-death safety net, not the source of truth
+                // for the live UI (that's _liveStats above); see stop()
+                // and RunRepository.salvageInterruptedRun() for the other
+                // half of this — normal navigate-away already stops
+                // tracking cleanly via MapScreen's DisposableEffect, this
+                // is specifically for the OS killing the process outright,
+                // which gets no such callback.
+                ticksSinceCheckpoint++
+                if (ticksSinceCheckpoint >= 10) {
+                    ticksSinceCheckpoint = 0
+                    settings.saveRunCheckpoint(
+                        RunCheckpoint(
+                            startTime = startTimeMillis,
+                            distanceMeters = distanceMeters,
+                            elevationGainMeters = elevationGainMeters,
+                            avgHeartRateBpm = heartRateSamples.takeIf { it.isNotEmpty() }?.average()
+                        )
+                    )
+                }
                 delay(1_000)
             }
         }
@@ -175,6 +200,10 @@ class RunTracker(context: Context) {
             routePoints = routePoints.toList()
         )
         _liveStats.value = null
+        // The caller is about to save this properly via RunRepository —
+        // the checkpoint's only job was surviving a process death that
+        // didn't happen, so it's stale as of now regardless of outcome.
+        CoroutineScope(Dispatchers.IO).launch { settings.clearRunCheckpoint() }
         return completed
     }
 

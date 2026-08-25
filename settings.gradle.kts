@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 rootProject.name = "PipBoyWatch"
 include(":wear")
 include(":phone")
+include(":shared")

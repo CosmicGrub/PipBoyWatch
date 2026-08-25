@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ (API 31+) backup/transfer rules. The Room DB is
+     SQLCipher-encrypted (see PipBoyDatabase/DatabasePassphrase) so a
+     backed-up copy is only ever encrypted bytes, but it's still excluded
+     outright — a backup that can't decrypt to anything useful anyway is
+     just dead weight, and the wrapped passphrase itself (Keystore-bound)
+     wouldn't survive a restore to a different device regardless. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="database" path="pipboy.db" />
+        <exclude domain="database" path="pipboy.db-wal" />
+        <exclude domain="database" path="pipboy.db-shm" />
+        <exclude domain="sharedpref" path="pipboy_db_key.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="database" path="pipboy.db" />
+        <exclude domain="database" path="pipboy.db-wal" />
+        <exclude domain="database" path="pipboy.db-shm" />
+        <exclude domain="sharedpref" path="pipboy_db_key.xml" />
+    </device-transfer>
+</data-extraction-rules>

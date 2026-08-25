@@ -2,36 +2,25 @@ package com.pipboywatch.app.ui.tab
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.rememberActiveFocusRequester
-import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
-import androidx.wear.compose.foundation.rotary.rotaryScrollable
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.pipboywatch.app.data.InvItemEntity
 import com.pipboywatch.app.inv.InvRepository
 import com.pipboywatch.app.ui.components.CrtCard
-import com.pipboywatch.app.ui.components.ScanlineOverlay
-import com.pipboywatch.app.ui.components.screenContentPadding
+import com.pipboywatch.app.ui.components.PipBoyTabScaffold
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -55,35 +44,15 @@ fun InvScreen() {
         }
     }
 
-    val scrollState = rememberScrollState()
-    val focusRequester = rememberActiveFocusRequester()
-    val rotaryBehavior = RotaryScrollableDefaults.behavior(scrollableState = scrollState)
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .rotaryScrollable(rotaryBehavior, focusRequester)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(screenContentPadding()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = "INV", style = MaterialTheme.typography.title2, color = MaterialTheme.colors.primary)
-            Spacer(Modifier.height(12.dp))
-
-            if (items.isEmpty()) {
-                CrtCard { Text("Loading checklist...", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2) }
-            } else {
-                items.forEach { item ->
-                    InvRow(item = item, onToggle = { coroutineScope.launch { repository.toggleChecked(item) } })
-                    Spacer(Modifier.height(6.dp))
-                }
+    PipBoyTabScaffold(title = "INV") {
+        if (items.isEmpty()) {
+            CrtCard { Text("Loading checklist...", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2) }
+        } else {
+            items.forEach { item ->
+                InvRow(item = item, onToggle = { coroutineScope.launch { repository.toggleChecked(item) } })
+                Spacer(Modifier.height(6.dp))
             }
         }
-        ScanlineOverlay()
     }
 }
 

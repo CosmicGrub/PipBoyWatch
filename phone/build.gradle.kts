@@ -33,14 +33,23 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    buildFeatures {
+        // Opt-in as of AGP 8+ — needed for BuildConfig.DEBUG (used to guard
+        // a log line that would otherwise print shared note text in
+        // release logcat, see SendNoteActivity).
+        buildConfig = true
+    }
 }
 
 dependencies {
+    implementation(project(":shared"))
+
     implementation("com.google.android.gms:play-services-wearable:20.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
     // Phone-side Health Connect relay: the watch's own Health Connect access
-    // is broken on this hardware (see wear's HealthConnectManager) — the
+    // is broken on this hardware (see :shared's HealthConnectManager) — the
     // phone is the reliable source, so it reads here and pushes a snapshot
     // to the watch over the Wear Data Layer.
     implementation("androidx.health.connect:connect-client:1.1.0")

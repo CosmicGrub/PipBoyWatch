@@ -3,12 +3,14 @@ package com.pipboywatch.app.map
 import android.content.Context
 import com.pipboywatch.app.data.PipBoyDatabase
 import com.pipboywatch.app.data.RunEntity
+import com.pipboywatch.app.data.SettingsStore
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONArray
 import org.json.JSONObject
 
 class RunRepository(context: Context) {
     private val dao = PipBoyDatabase.getInstance(context.applicationContext).runDao()
+    private val settings = SettingsStore(context.applicationContext)
 
     fun observeRuns(): Flow<List<RunEntity>> = dao.observeAll()
 
@@ -23,6 +25,34 @@ class RunRepository(context: Context) {
                 routePointsJson = encodeRoute(run.routePoints)
             )
         )
+    }
+
+    /**
+     * Call once when MAP is entered, before the user can start a new run.
+     * If RunTracker left a checkpoint behind — the process was killed
+     * mid-run, so MapScreen's normal DisposableEffect-on-teardown save
+     * never ran — save what was checkpointed as a completed run rather
+     * than silently losing it, then clear the checkpoint. The route/
+     * heart-rate sample list aren't part of the checkpoint (see
+     * SettingsStore.RunCheckpoint), so a salvaged run has no route points
+     * and its avg heart rate is only as fresh as the last ~10s checkpoint
+     * — a known, accepted gap, not a bug: the alternative is losing the
+     * whole run outright.
+     */
+    suspend fun salvageInterruptedRun(): Boolean {
+        val checkpoint = settings.getRunCheckpoint() ?: return false
+        dao.insert(
+            RunEntity(
+                startTime = checkpoint.startTime,
+                endTime = System.currentTimeMillis(),
+                distanceMeters = checkpoint.distanceMeters,
+                elevationGainMeters = checkpoint.elevationGainMeters,
+                avgHeartRateBpm = checkpoint.avgHeartRateBpm,
+                routePointsJson = encodeRoute(emptyList())
+            )
+        )
+        settings.clearRunCheckpoint()
+        return true
     }
 
     private fun encodeRoute(points: List<RunPoint>): String {

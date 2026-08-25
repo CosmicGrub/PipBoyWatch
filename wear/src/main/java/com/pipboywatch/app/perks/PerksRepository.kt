@@ -1,10 +1,10 @@
 package com.pipboywatch.app.perks
 
 import android.content.Context
-import com.pipboywatch.app.health.HealthConnectManager
 import com.pipboywatch.app.health.PhoneStatRelay
-import com.pipboywatch.app.health.PhoneStatResult
 import com.pipboywatch.app.inv.InvRepository
+import com.pipboywatch.shared.health.HealthConnectManager
+import com.pipboywatch.shared.sync.StatDecodeResult
 
 data class Perk(
     val name: String,
@@ -39,7 +39,7 @@ class PerksRepository(context: Context) {
             // last phone relay found, if any. Opportunistic only: this
             // doesn't itself trigger a phone request, so it's stale/empty
             // until STAT has been opened at least once this session.
-            val relayed = (PhoneStatRelay.result.value as? PhoneStatResult.Success)?.snapshot?.hasStepStreak
+            val relayed = (PhoneStatRelay.result.value as? StatDecodeResult.Success)?.snapshot?.hasStepStreak
             when (relayed) {
                 null -> Perk(
                     name = "Step Streak",

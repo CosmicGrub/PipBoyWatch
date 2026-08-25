@@ -27,7 +27,10 @@ class SendNoteActivity : Activity() {
         } else {
             null
         }
-        Log.d(TAG, "onCreate text=$text")
+        // Log the note's length, not its content — this is free-text the
+        // user shared, and logcat is readable by anything with ADB/shell
+        // access even on a release build.
+        if (BuildConfig.DEBUG) Log.d(TAG, "onCreate textLength=${text?.length}")
 
         if (text.isNullOrBlank()) {
             toastAndFinish("Nothing to send")

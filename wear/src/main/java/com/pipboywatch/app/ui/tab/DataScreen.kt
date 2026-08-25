@@ -6,16 +6,11 @@ import android.provider.Settings
 import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -28,10 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.rememberActiveFocusRequester
-import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
-import androidx.wear.compose.foundation.rotary.rotaryScrollable
-import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.pipboywatch.app.data.HolotapeEntity
@@ -42,10 +33,10 @@ import com.pipboywatch.app.notes.NoteRepository
 import com.pipboywatch.app.perks.Perk
 import com.pipboywatch.app.perks.PerksRepository
 import com.pipboywatch.app.quest.QuestRepository
+import com.pipboywatch.app.ui.components.ActionRow
 import com.pipboywatch.app.ui.components.CrtCard
-import com.pipboywatch.app.ui.components.ScanlineOverlay
+import com.pipboywatch.app.ui.components.PipBoyTabScaffold
 import com.pipboywatch.app.ui.components.rememberTextInputLauncher
-import com.pipboywatch.app.ui.components.screenContentPadding
 import kotlinx.coroutines.launch
 
 @Composable
@@ -76,107 +67,85 @@ fun DataScreen() {
         coroutineScope.launch { noteRepo.addFromWatch(text) }
     }
 
-    val scrollState = rememberScrollState()
-    val focusRequester = rememberActiveFocusRequester()
-    val rotaryBehavior = RotaryScrollableDefaults.behavior(scrollableState = scrollState)
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .rotaryScrollable(rotaryBehavior, focusRequester)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(screenContentPadding()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = "DATA", style = MaterialTheme.typography.title2, color = MaterialTheme.colors.primary)
-            Spacer(Modifier.height(12.dp))
-
-            SectionHeader("QUESTS")
-            if (quests.isEmpty()) {
-                CrtCard { Text("No active quests.", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2) }
+    PipBoyTabScaffold(title = "DATA") {
+        SectionHeader("QUESTS")
+        if (quests.isEmpty()) {
+            CrtCard { Text("No active quests.", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2) }
+            Spacer(Modifier.height(6.dp))
+        } else {
+            quests.forEach { quest ->
+                QuestRow(
+                    quest = quest,
+                    onToggle = { coroutineScope.launch { questRepo.toggleDone(quest) } },
+                    onDelete = { coroutineScope.launch { questRepo.remove(quest) } }
+                )
                 Spacer(Modifier.height(6.dp))
-            } else {
-                quests.forEach { quest ->
-                    QuestRow(
-                        quest = quest,
-                        onToggle = { coroutineScope.launch { questRepo.toggleDone(quest) } },
-                        onDelete = { coroutineScope.launch { questRepo.remove(quest) } }
-                    )
-                    Spacer(Modifier.height(6.dp))
-                }
             }
-            ActionRow("+ ADD QUEST", onClick = addQuest)
-            Spacer(Modifier.height(16.dp))
+        }
+        ActionRow("+ ADD QUEST", onClick = addQuest)
+        Spacer(Modifier.height(16.dp))
 
-            SectionHeader("HOLOTAPES")
-            when {
-                !holotapeAccessGranted -> {
-                    CrtCard(title = "ACCESS REQUIRED") {
+        SectionHeader("HOLOTAPES")
+        when {
+            !holotapeAccessGranted -> {
+                CrtCard(title = "ACCESS REQUIRED") {
+                    Text(
+                        "Grant notification access to log holotapes.",
+                        color = MaterialTheme.colors.primary,
+                        style = MaterialTheme.typography.body2
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    if (holotapeSettingsUnavailable) {
                         Text(
-                            "Grant notification access to log holotapes.",
-                            color = MaterialTheme.colors.primary,
-                            style = MaterialTheme.typography.body2
+                            "This watch doesn't expose that settings screen directly. " +
+                                "Try the paired phone's Galaxy Wearable app instead.",
+                            color = MaterialTheme.colors.error,
+                            style = MaterialTheme.typography.caption2
                         )
-                        Spacer(Modifier.height(8.dp))
-                        if (holotapeSettingsUnavailable) {
-                            Text(
-                                "This watch doesn't expose that settings screen directly. " +
-                                    "Try the paired phone's Galaxy Wearable app instead.",
-                                color = MaterialTheme.colors.error,
-                                style = MaterialTheme.typography.caption2
-                            )
-                        } else {
-                            Button(onClick = {
-                                try {
-                                    context.startActivity(
-                                        Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    )
-                                } catch (e: ActivityNotFoundException) {
-                                    holotapeSettingsUnavailable = true
-                                }
-                            }) {
-                                Text("GRANT")
+                    } else {
+                        ActionRow("GRANT") {
+                            try {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            } catch (e: ActivityNotFoundException) {
+                                holotapeSettingsUnavailable = true
                             }
                         }
                     }
                 }
-                holotapes.isEmpty() -> {
-                    CrtCard { Text("No recent notifications.", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2) }
-                }
-                else -> {
-                    holotapes.forEach { tape ->
-                        HolotapeRow(tape)
-                        Spacer(Modifier.height(6.dp))
-                    }
-                }
             }
-            Spacer(Modifier.height(16.dp))
-
-            SectionHeader("PERKS")
-            perks.forEach { perk ->
-                PerkRow(perk)
-                Spacer(Modifier.height(6.dp))
+            holotapes.isEmpty() -> {
+                CrtCard { Text("No recent notifications.", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2) }
             }
-            Spacer(Modifier.height(16.dp))
-
-            SectionHeader("NOTES")
-            if (notes.isEmpty()) {
-                CrtCard { Text("No notes yet.", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2) }
-                Spacer(Modifier.height(6.dp))
-            } else {
-                notes.forEach { note ->
-                    NoteRow(note)
+            else -> {
+                holotapes.forEach { tape ->
+                    HolotapeRow(tape)
                     Spacer(Modifier.height(6.dp))
                 }
             }
-            ActionRow("+ ADD NOTE", onClick = addNote)
         }
-        ScanlineOverlay()
+        Spacer(Modifier.height(16.dp))
+
+        SectionHeader("PERKS")
+        perks.forEach { perk ->
+            PerkRow(perk)
+            Spacer(Modifier.height(6.dp))
+        }
+        Spacer(Modifier.height(16.dp))
+
+        SectionHeader("NOTES")
+        if (notes.isEmpty()) {
+            CrtCard { Text("No notes yet.", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2) }
+            Spacer(Modifier.height(6.dp))
+        } else {
+            notes.forEach { note ->
+                NoteRow(note)
+                Spacer(Modifier.height(6.dp))
+            }
+        }
+        ActionRow("+ ADD NOTE", onClick = addNote)
     }
 }
 
@@ -188,18 +157,6 @@ private fun SectionHeader(text: String) {
         color = MaterialTheme.colors.primary.copy(alpha = 0.6f),
         modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
     )
-}
-
-@Composable
-private fun ActionRow(label: String, onClick: () -> Unit) {
-    CrtCard(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Text(
-            text = label,
-            color = MaterialTheme.colors.primary,
-            style = MaterialTheme.typography.body2,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
 }
 
 @Composable

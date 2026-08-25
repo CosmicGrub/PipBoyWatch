@@ -4,12 +4,15 @@ import android.util.Log
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
-import com.pipboywatch.health.HealthConnectManager
+import com.pipboywatch.shared.health.HealthConnectManager
+import com.pipboywatch.shared.sync.STAT_REQUEST_PATH
+import com.pipboywatch.shared.sync.STAT_RESPONSE_PATH
+import com.pipboywatch.shared.sync.encodeStatSnapshot
+import com.pipboywatch.shared.sync.isFromTrustedNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 private const val TAG = "PipBoyStatSync"
 
@@ -30,6 +33,11 @@ class StatRequestListenerService : WearableListenerService() {
         if (messageEvent.path != STAT_REQUEST_PATH) return
 
         val sourceNodeId = messageEvent.sourceNodeId
+        // "|" + the request's id, if any (see requestId in STAT_REQUEST_PATH
+        // payload) — echoed back in the reply so a stale request can't be
+        // mistaken for the answer to a newer one. Empty payload (legacy /
+        // no id) just gets echoed back empty.
+        val requestId = String(messageEvent.data, Charsets.UTF_8)
         serviceScope.launch {
             // The Wear Data Layer's AppKey routing already restricts
             // delivery to apps sharing this app's package+signature, but
@@ -37,15 +45,16 @@ class StatRequestListenerService : WearableListenerService() {
             // key — this is a cheap extra check that the request actually
             // came from a currently-connected paired node before we hand
             // it real Health Connect data.
-            if (!isFromTrustedNode(sourceNodeId)) {
+            if (!isFromTrustedNode(applicationContext, sourceNodeId)) {
                 Log.w(TAG, "Ignoring stat request from untrusted node $sourceNodeId")
                 return@launch
             }
-            val payload = when {
+            val body = when {
                 !healthManager.isAvailable -> "UNAVAILABLE"
                 !healthManager.hasAllPermissions() -> "NEEDS_PERMISSION"
                 else -> encodeStatSnapshot(healthManager.readStatSnapshot())
             }
+            val payload = "$requestId|$body"
             Wearable.getMessageClient(applicationContext)
                 .sendMessage(sourceNodeId, STAT_RESPONSE_PATH, payload.toByteArray(Charsets.UTF_8))
                 .addOnCompleteListener { result ->
@@ -57,14 +66,5 @@ class StatRequestListenerService : WearableListenerService() {
     override fun onDestroy() {
         serviceScope.cancel()
         super.onDestroy()
-    }
-
-    private suspend fun isFromTrustedNode(sourceNodeId: String): Boolean {
-        return try {
-            Wearable.getNodeClient(applicationContext).connectedNodes.await().any { it.id == sourceNodeId }
-        } catch (e: Exception) {
-            Log.d(TAG, "isFromTrustedNode check failed", e)
-            false
-        }
     }
 }

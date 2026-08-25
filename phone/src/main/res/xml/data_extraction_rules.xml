@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phone module has no persisted local data today (no Room DB, no
+     sensitive SharedPreferences) — present for consistency with wear's
+     rules and as the place to add exclusions if that changes. -->
+<data-extraction-rules>
+    <cloud-backup />
+    <device-transfer />
+</data-extraction-rules>

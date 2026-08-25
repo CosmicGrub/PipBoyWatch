@@ -5,33 +5,22 @@ import android.content.pm.PackageManager
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.wear.compose.foundation.rememberActiveFocusRequester
-import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
-import androidx.wear.compose.foundation.rotary.rotaryScrollable
-import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.pipboywatch.app.data.RunEntity
@@ -41,9 +30,9 @@ import com.pipboywatch.app.map.RunTracker
 import com.pipboywatch.app.map.formatElapsed
 import com.pipboywatch.app.map.formatPace
 import com.pipboywatch.app.map.paceSecondsPerKm
+import com.pipboywatch.app.ui.components.ActionRow
 import com.pipboywatch.app.ui.components.CrtCard
-import com.pipboywatch.app.ui.components.ScanlineOverlay
-import com.pipboywatch.app.ui.components.screenContentPadding
+import com.pipboywatch.app.ui.components.PipBoyTabScaffold
 import kotlinx.coroutines.launch
 
 @Composable
@@ -54,8 +43,21 @@ fun MapScreen() {
     val coroutineScope = rememberCoroutineScope()
 
     var isTracking by remember { mutableStateOf(false) }
+    var justSalvagedRun by remember { mutableStateOf(false) }
     val liveStats by runTracker.liveStats.collectAsState()
     val pastRuns by runRepository.observeRuns().collectAsState(initial = emptyList())
+
+    // If RunTracker left a checkpoint from a run that never got a proper
+    // STOP RUN (process death, or the user navigated away mid-run — see
+    // RunRepository.salvageInterruptedRun()), recover it as a completed
+    // run now rather than silently losing it. Runs before the user can
+    // start a new one so there's no ambiguity about which run a fresh
+    // checkpoint would belong to.
+    LaunchedEffect(Unit) {
+        if (runRepository.salvageInterruptedRun()) {
+            justSalvagedRun = true
+        }
+    }
 
     var hasLocationPermission by remember {
         mutableStateOf(
@@ -86,81 +88,69 @@ fun MapScreen() {
         }
     }
 
-    val scrollState = rememberScrollState()
-    val focusRequester = rememberActiveFocusRequester()
-    val rotaryBehavior = RotaryScrollableDefaults.behavior(scrollableState = scrollState)
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .rotaryScrollable(rotaryBehavior, focusRequester)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(screenContentPadding()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = "MAP", style = MaterialTheme.typography.title2, color = MaterialTheme.colors.primary)
-            Spacer(Modifier.height(12.dp))
-
-            when {
-                !hasLocationPermission -> {
-                    CrtCard(title = "ACCESS REQUIRED") {
-                        Text(
-                            "Grant location access to track runs.",
-                            color = MaterialTheme.colors.primary,
-                            style = MaterialTheme.typography.body2
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = {
-                            permissionLauncher.launch(
-                                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BODY_SENSORS)
-                            )
-                        }) {
-                            Text("GRANT")
-                        }
-                    }
-                }
-                isTracking -> {
-                    LiveRunCard(liveStats, heartRateEnabled = runTracker.heartRateEnabledThisRun)
+    PipBoyTabScaffold(title = "MAP") {
+        if (justSalvagedRun) {
+            CrtCard(title = "RECOVERED") {
+                Text(
+                    "A run in progress was interrupted and has been saved to Past Runs below.",
+                    color = MaterialTheme.colors.primary,
+                    style = MaterialTheme.typography.body2
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+        when {
+            !hasLocationPermission -> {
+                CrtCard(title = "ACCESS REQUIRED") {
+                    Text(
+                        "Grant location access to track runs.",
+                        color = MaterialTheme.colors.primary,
+                        style = MaterialTheme.typography.body2
+                    )
                     Spacer(Modifier.height(8.dp))
-                    ActionRow("STOP RUN") {
-                        val completed = runTracker.stop()
-                        isTracking = false
-                        coroutineScope.launch { runRepository.saveRun(completed) }
-                    }
-                }
-                else -> {
-                    ActionRow("START RUN") {
-                        runTracker.start()
-                        isTracking = true
+                    ActionRow("GRANT") {
+                        permissionLauncher.launch(
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BODY_SENSORS)
+                        )
                     }
                 }
             }
-
-            Spacer(Modifier.height(16.dp))
-            SectionHeader("PAST RUNS")
-            if (pastRuns.isEmpty()) {
-                CrtCard { Text("No runs recorded yet.", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2) }
-            } else {
-                val bestPaceRunId = pastRuns
-                    .mapNotNull { run -> paceSecondsPerKm(run.distanceMeters, (run.endTime - run.startTime) / 1000)?.let { run.id to it } }
-                    .minByOrNull { it.second }?.first
-                val bestClimbRunId = pastRuns.maxByOrNull { it.elevationGainMeters }?.id
-
-                pastRuns.forEach { run ->
-                    PastRunRow(
-                        run = run,
-                        isBestPace = run.id == bestPaceRunId,
-                        isBestClimb = run.id == bestClimbRunId && run.elevationGainMeters > 0
-                    )
-                    Spacer(Modifier.height(6.dp))
+            isTracking -> {
+                LiveRunCard(liveStats, heartRateEnabled = runTracker.heartRateEnabledThisRun)
+                Spacer(Modifier.height(8.dp))
+                ActionRow("STOP RUN") {
+                    val completed = runTracker.stop()
+                    isTracking = false
+                    coroutineScope.launch { runRepository.saveRun(completed) }
+                }
+            }
+            else -> {
+                ActionRow("START RUN") {
+                    runTracker.start()
+                    isTracking = true
                 }
             }
         }
-        ScanlineOverlay()
+
+        Spacer(Modifier.height(16.dp))
+        SectionHeader("PAST RUNS")
+        if (pastRuns.isEmpty()) {
+            CrtCard { Text("No runs recorded yet.", color = MaterialTheme.colors.primary, style = MaterialTheme.typography.body2) }
+        } else {
+            val bestPaceRunId = pastRuns
+                .mapNotNull { run -> paceSecondsPerKm(run.distanceMeters, (run.endTime - run.startTime) / 1000)?.let { run.id to it } }
+                .minByOrNull { it.second }?.first
+            val bestClimbRunId = pastRuns.maxByOrNull { it.elevationGainMeters }?.id
+
+            pastRuns.forEach { run ->
+                PastRunRow(
+                    run = run,
+                    isBestPace = run.id == bestPaceRunId,
+                    isBestClimb = run.id == bestClimbRunId && run.elevationGainMeters > 0
+                )
+                Spacer(Modifier.height(6.dp))
+            }
+        }
     }
 }
 
@@ -172,18 +162,6 @@ private fun SectionHeader(text: String) {
         color = MaterialTheme.colors.primary.copy(alpha = 0.6f),
         modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
     )
-}
-
-@Composable
-private fun ActionRow(label: String, onClick: () -> Unit) {
-    CrtCard(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Text(
-            text = label,
-            color = MaterialTheme.colors.primary,
-            style = MaterialTheme.typography.body2,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
 }
 
 @Composable

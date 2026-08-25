@@ -10,10 +10,10 @@ import androidx.activity.ComponentActivity
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.wearable.Wearable
-import com.pipboywatch.health.HEALTH_PERMISSIONS
-import com.pipboywatch.health.HealthConnectManager
-import com.pipboywatch.sync.STAT_RESPONSE_PATH
-import com.pipboywatch.sync.encodeStatSnapshot
+import com.pipboywatch.shared.health.HEALTH_PERMISSIONS
+import com.pipboywatch.shared.health.HealthConnectManager
+import com.pipboywatch.shared.sync.STAT_RESPONSE_PATH
+import com.pipboywatch.shared.sync.encodeStatSnapshot
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -107,10 +107,16 @@ class MainActivity : ComponentActivity() {
                     Toast.makeText(this@MainActivity, "No Pip-Boy watch connected", Toast.LENGTH_SHORT).show()
                     return@launch
                 }
-                val payload = encodeStatSnapshot(healthManager.readStatSnapshot()).toByteArray(Charsets.UTF_8)
+                // Empty request id — this is an unsolicited push (the user
+                // tapped "Sync to Watch Now"), not a reply to a watch-side
+                // request, so there's no id to echo back. PhoneStatRelay
+                // on the watch treats an empty id as always-accepted.
+                val payload = ("|" + encodeStatSnapshot(healthManager.readStatSnapshot())).toByteArray(Charsets.UTF_8)
                 val messageClient = Wearable.getMessageClient(this@MainActivity)
                 nodes.forEach { node -> messageClient.sendMessage(node.id, STAT_RESPONSE_PATH, payload).await() }
                 Toast.makeText(this@MainActivity, "Synced to watch", Toast.LENGTH_SHORT).show()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Sync failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }

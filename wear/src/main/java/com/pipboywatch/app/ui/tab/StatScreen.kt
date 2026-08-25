@@ -1,16 +1,8 @@
 package com.pipboywatch.app.ui.tab
 
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -19,24 +11,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
-import androidx.wear.compose.foundation.rememberActiveFocusRequester
-import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
-import androidx.wear.compose.foundation.rotary.rotaryScrollable
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import com.pipboywatch.app.health.HEALTH_PERMISSIONS
-import com.pipboywatch.app.health.HealthConnectManager
 import com.pipboywatch.app.health.PhoneStatRelay
-import com.pipboywatch.app.health.PhoneStatResult
-import com.pipboywatch.app.health.StatSnapshot
+import com.pipboywatch.app.ui.components.ActionRow
 import com.pipboywatch.app.ui.components.CrtCard
-import com.pipboywatch.app.ui.components.ScanlineOverlay
-import com.pipboywatch.app.ui.components.screenContentPadding
+import com.pipboywatch.app.ui.components.PipBoyTabScaffold
+import com.pipboywatch.shared.health.HEALTH_PERMISSIONS
+import com.pipboywatch.shared.health.HealthConnectManager
+import com.pipboywatch.shared.health.StatSnapshot
+import com.pipboywatch.shared.sync.StatDecodeResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -94,9 +82,9 @@ fun StatScreen() {
     LaunchedEffect(phoneResult) {
         when (val result = phoneResult) {
             null -> Unit
-            is PhoneStatResult.Success -> uiState = StatUiState.Loaded(result.snapshot, viaPhone = true)
-            PhoneStatResult.NeedsPermission -> uiState = StatUiState.PhoneNeedsPermission
-            PhoneStatResult.Unavailable -> uiState = StatUiState.Unavailable
+            is StatDecodeResult.Success -> uiState = StatUiState.Loaded(result.snapshot, viaPhone = true)
+            StatDecodeResult.NeedsPermission -> uiState = StatUiState.PhoneNeedsPermission
+            StatDecodeResult.Unavailable -> uiState = StatUiState.Unavailable
         }
     }
 
@@ -109,57 +97,21 @@ fun StatScreen() {
         }
     }
 
-    val scrollState = rememberScrollState()
-    val focusRequester = rememberActiveFocusRequester()
-    val rotaryBehavior = RotaryScrollableDefaults.behavior(scrollableState = scrollState)
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .rotaryScrollable(rotaryBehavior, focusRequester)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(screenContentPadding()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = "STAT", style = MaterialTheme.typography.title2, color = MaterialTheme.colors.primary)
-            Spacer(Modifier.height(12.dp))
-
-            when (val state = uiState) {
-                is StatUiState.Loading -> LoadingCard()
-                is StatUiState.AwaitingPhone -> AwaitingPhoneCard()
-                is StatUiState.PhoneNeedsPermission -> PhoneNeedsPermissionCard {
-                    coroutineScope.launch { tryPhoneRelay() }
-                }
-                is StatUiState.Unavailable -> UnavailableCard {
-                    coroutineScope.launch { tryPhoneRelay() }
-                }
-                is StatUiState.NeedsPermission -> NeedsPermissionCard {
-                    permissionLauncher.launch(HEALTH_PERMISSIONS)
-                }
-                is StatUiState.Loaded -> LoadedStats(state.snapshot, state.viaPhone)
+    PipBoyTabScaffold(title = "STAT") {
+        when (val state = uiState) {
+            is StatUiState.Loading -> LoadingCard()
+            is StatUiState.AwaitingPhone -> AwaitingPhoneCard()
+            is StatUiState.PhoneNeedsPermission -> PhoneNeedsPermissionCard {
+                coroutineScope.launch { tryPhoneRelay() }
             }
+            is StatUiState.Unavailable -> UnavailableCard {
+                coroutineScope.launch { tryPhoneRelay() }
+            }
+            is StatUiState.NeedsPermission -> NeedsPermissionCard {
+                permissionLauncher.launch(HEALTH_PERMISSIONS)
+            }
+            is StatUiState.Loaded -> LoadedStats(state.snapshot, state.viaPhone)
         }
-        ScanlineOverlay()
-    }
-}
-
-/** Full-width tappable terminal row — same fix as RADIO's TransportRow:
- * Wear Compose's Button defaults to a small circular icon shape that wraps
- * short text mid-word ("GRAN"/"T"), so plain-text actions use a CrtCard
- * row instead. */
-@Composable
-private fun TerminalActionRow(label: String, onClick: () -> Unit) {
-    CrtCard(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Text(
-            text = label,
-            color = MaterialTheme.colors.primary,
-            style = MaterialTheme.typography.body2,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 
@@ -189,7 +141,7 @@ private fun PhoneNeedsPermissionCard(onRetry: () -> Unit) {
         )
     }
     Spacer(Modifier.height(8.dp))
-    TerminalActionRow("RETRY") { onRetry() }
+    ActionRow("RETRY") { onRetry() }
 }
 
 @Composable
@@ -203,7 +155,7 @@ private fun UnavailableCard(onRetry: () -> Unit) {
         )
     }
     Spacer(Modifier.height(8.dp))
-    TerminalActionRow("RETRY") { onRetry() }
+    ActionRow("RETRY") { onRetry() }
 }
 
 @Composable
@@ -216,7 +168,7 @@ private fun NeedsPermissionCard(onGrant: () -> Unit) {
         )
     }
     Spacer(Modifier.height(8.dp))
-    TerminalActionRow("GRANT") { onGrant() }
+    ActionRow("GRANT") { onGrant() }
 }
 
 @Composable

@@ -15,4 +15,14 @@ class NoteRepository(context: Context) {
         if (trimmed.isEmpty()) return
         dao.insert(NoteEntity(text = trimmed, receivedAt = System.currentTimeMillis(), source = "watch"))
     }
+
+    /** Used by PipBoyMessageListenerService for phone-relayed notes — kept
+     * here (rather than the listener service hitting PipBoyDatabase
+     * directly) so this repository stays the single place that decides how
+     * a note gets written, same as addFromWatch. */
+    suspend fun addFromPhone(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+        dao.insert(NoteEntity(text = trimmed, receivedAt = System.currentTimeMillis(), source = "phone"))
+    }
 }

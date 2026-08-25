@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pre-Android-12 Auto Backup rules — phone's minSdk (26) is below API
+     31. No exclusions needed today (see data_extraction_rules.xml). -->
+<full-backup-content />
