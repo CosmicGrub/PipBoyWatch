@@ -25,6 +25,7 @@ fun rememberTextInputLauncher(label: String, onResult: (String) -> Unit): () -> 
             val text = result.data?.let { RemoteInput.getResultsFromIntent(it) }
                 ?.getCharSequence(TEXT_INPUT_KEY)
                 ?.toString()
+                ?.trim()
             if (!text.isNullOrBlank()) onResult(text)
         }
     }

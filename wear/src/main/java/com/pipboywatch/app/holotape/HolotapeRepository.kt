@@ -32,4 +32,16 @@ class HolotapeRepository(private val context: Context) {
         dao.insert(HolotapeEntity(appLabel = appLabel, title = title, text = text, postedAt = postedAt))
         dao.trimOldEntries()
     }
+
+    /** For ExportManager — every row currently in the table, not just the
+     * 20 observeRecent() shows in the UI. */
+    suspend fun getAllOnce(): List<HolotapeEntity> = dao.getAllOnce()
+
+    /** For RestoreManager — always inserts as a new row (id=0), then
+     * re-applies the same trim the normal logging path does so a restore
+     * can't grow the table past its usual cap. */
+    suspend fun restoreHolotape(tape: HolotapeEntity) {
+        dao.insert(tape.copy(id = 0))
+        dao.trimOldEntries()
+    }
 }

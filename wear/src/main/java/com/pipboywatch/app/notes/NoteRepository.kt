@@ -25,4 +25,12 @@ class NoteRepository(context: Context) {
         if (trimmed.isEmpty()) return
         dao.insert(NoteEntity(text = trimmed, receivedAt = System.currentTimeMillis(), source = "phone"))
     }
+
+    /** For ExportManager. */
+    suspend fun getAllOnce(): List<NoteEntity> = dao.getAllOnce()
+
+    /** For RestoreManager — always inserts as a new row (id=0). */
+    suspend fun restoreNote(note: NoteEntity) {
+        dao.insert(note.copy(id = 0))
+    }
 }

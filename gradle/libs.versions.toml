@@ -45,6 +45,10 @@ sqlcipher = "4.5.4"
 
 # Testing
 junit = "4.13.2"
+# Real org.json for local unit tests — Android's compile-time org.json is
+# a "Stub!"-throwing placeholder (real impl only exists on-device), so
+# BackupSchemaTest needs an actual implementation on the JVM test classpath.
+json = "20231013"
 
 [libraries]
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
@@ -73,6 +77,7 @@ play-services-wearable = { module = "com.google.android.gms:play-services-wearab
 coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutines-play-services" }
 sqlcipher = { module = "net.zetetic:android-database-sqlcipher", version.ref = "sqlcipher" }
 junit = { module = "junit:junit", version.ref = "junit" }
+json = { module = "org.json:json", version.ref = "json" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -61,6 +61,22 @@ class InvRepository(context: Context) {
         return items.isNotEmpty() && items.all { it.isChecked }
     }
 
+    /** For ExportManager. */
+    suspend fun getAllOnce(): List<InvItemEntity> = dao.getAllOnce()
+
+    /**
+     * For RestoreManager. Unlike Quest/Holotape/Note/Run (accumulating
+     * logs, where a restore should just add rows back), INV is a small
+     * fixed configuration — blindly re-inserting backed-up rows would
+     * duplicate the existing seeded items rather than restore them. Upsert
+     * by label instead: replace the existing row with that label if one
+     * exists, insert as new otherwise.
+     */
+    suspend fun restoreItem(item: InvItemEntity) {
+        val existing = dao.getAllOnce().find { it.label == item.label }
+        dao.insertAll(listOf(item.copy(id = existing?.id ?: 0)))
+    }
+
     suspend fun refreshPhoneConnection() {
         val phoneItem = dao.getSystemLinkedItem() ?: return
         val connected = try {

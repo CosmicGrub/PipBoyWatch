@@ -10,6 +10,9 @@ interface NoteDao {
     @Query("SELECT * FROM notes ORDER BY receivedAt DESC")
     fun observeAll(): Flow<List<NoteEntity>>
 
+    @Query("SELECT * FROM notes")
+    suspend fun getAllOnce(): List<NoteEntity>
+
     @Insert
     suspend fun insert(note: NoteEntity)
 }

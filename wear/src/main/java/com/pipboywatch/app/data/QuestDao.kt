@@ -11,6 +11,9 @@ interface QuestDao {
     @Query("SELECT * FROM quests ORDER BY isDone ASC, createdAt DESC")
     fun observeAll(): Flow<List<QuestEntity>>
 
+    @Query("SELECT * FROM quests")
+    suspend fun getAllOnce(): List<QuestEntity>
+
     @Insert
     suspend fun insert(quest: QuestEntity)
 

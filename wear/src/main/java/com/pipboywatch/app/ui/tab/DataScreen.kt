@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
+import com.pipboywatch.app.backup.ExportManager
+import com.pipboywatch.app.backup.RestoreManager
 import com.pipboywatch.app.data.HolotapeEntity
 import com.pipboywatch.app.data.NoteEntity
 import com.pipboywatch.app.data.QuestEntity
@@ -37,6 +39,7 @@ import com.pipboywatch.app.ui.components.ActionRow
 import com.pipboywatch.app.ui.components.CrtCard
 import com.pipboywatch.app.ui.components.PipBoyTabScaffold
 import com.pipboywatch.app.ui.components.rememberTextInputLauncher
+import javax.crypto.AEADBadTagException
 import kotlinx.coroutines.launch
 
 @Composable
@@ -46,7 +49,10 @@ fun DataScreen() {
     val holotapeRepo = remember { HolotapeRepository(context) }
     val noteRepo = remember { NoteRepository(context) }
     val perksRepo = remember { PerksRepository(context) }
+    val exportManager = remember { ExportManager(context) }
+    val restoreManager = remember { RestoreManager(context) }
     val coroutineScope = rememberCoroutineScope()
+    var backupStatus by remember { mutableStateOf<String?>(null) }
 
     val quests by questRepo.observeAll().collectAsState(initial = emptyList())
     val holotapes by holotapeRepo.observeRecent().collectAsState(initial = emptyList())
@@ -65,6 +71,33 @@ fun DataScreen() {
     }
     val addNote = rememberTextInputLauncher("New note") { text ->
         coroutineScope.launch { noteRepo.addFromWatch(text) }
+    }
+    val exportEncrypted = rememberTextInputLauncher("Backup passphrase") { passphrase ->
+        coroutineScope.launch {
+            try {
+                val result = exportManager.exportEncrypted(passphrase.toCharArray())
+                backupStatus = "Exported ${result.rowCount} rows -> ${result.file.name}"
+            } catch (e: Exception) {
+                backupStatus = "Export failed: ${e.message}"
+            }
+        }
+    }
+    val restoreEncrypted = rememberTextInputLauncher("Backup passphrase") { passphrase ->
+        coroutineScope.launch {
+            val latest = restoreManager.listBackupFiles().firstOrNull { it.extension == "pbenc" }
+            if (latest == null) {
+                backupStatus = "No encrypted backup found."
+            } else {
+                try {
+                    val result = restoreManager.restoreEncrypted(latest, passphrase.toCharArray())
+                    backupStatus = "Restored ${result.total} rows from ${latest.name}"
+                } catch (e: AEADBadTagException) {
+                    backupStatus = "Restore failed: wrong passphrase or corrupted file"
+                } catch (e: Exception) {
+                    backupStatus = "Restore failed: ${e.message}"
+                }
+            }
+        }
     }
 
     PipBoyTabScaffold(title = "DATA") {
@@ -146,6 +179,42 @@ fun DataScreen() {
             }
         }
         ActionRow("+ ADD NOTE", onClick = addNote)
+        Spacer(Modifier.height(16.dp))
+
+        SectionHeader("BACKUP")
+        if (backupStatus != null) {
+            CrtCard(title = "STATUS") {
+                Text(backupStatus.orEmpty(), color = MaterialTheme.colors.primary, style = MaterialTheme.typography.caption1)
+            }
+            Spacer(Modifier.height(6.dp))
+        }
+        ActionRow("EXPORT (PLAIN)") {
+            coroutineScope.launch {
+                try {
+                    val result = exportManager.exportPortable()
+                    backupStatus = "Exported ${result.rowCount} rows -> ${result.file.name}"
+                } catch (e: Exception) {
+                    backupStatus = "Export failed: ${e.message}"
+                }
+            }
+        }
+        ActionRow("EXPORT (ENCRYPTED)", onClick = exportEncrypted)
+        ActionRow("RESTORE LATEST PLAIN") {
+            coroutineScope.launch {
+                val latest = restoreManager.listBackupFiles().firstOrNull { it.extension == "jsonl" }
+                if (latest == null) {
+                    backupStatus = "No plain backup found."
+                } else {
+                    try {
+                        val result = restoreManager.restorePortable(latest)
+                        backupStatus = "Restored ${result.total} rows from ${latest.name}"
+                    } catch (e: Exception) {
+                        backupStatus = "Restore failed: ${e.message}"
+                    }
+                }
+            }
+        }
+        ActionRow("RESTORE LATEST ENCRYPTED", onClick = restoreEncrypted)
     }
 }
 

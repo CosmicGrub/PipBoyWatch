@@ -10,6 +10,12 @@ interface HolotapeDao {
     @Query("SELECT * FROM holotapes ORDER BY postedAt DESC LIMIT 20")
     fun observeRecent(): Flow<List<HolotapeEntity>>
 
+    // Unlike observeRecent()'s LIMIT 20 (a UI display cap), this returns
+    // every row currently in the table — up to 50, per trimOldEntries()
+    // below — for a full backup export.
+    @Query("SELECT * FROM holotapes")
+    suspend fun getAllOnce(): List<HolotapeEntity>
+
     @Insert
     suspend fun insert(holotape: HolotapeEntity)
 

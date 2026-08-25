@@ -10,6 +10,9 @@ interface RunDao {
     @Query("SELECT * FROM runs ORDER BY startTime DESC")
     fun observeAll(): Flow<List<RunEntity>>
 
+    @Query("SELECT * FROM runs")
+    suspend fun getAllOnce(): List<RunEntity>
+
     @Insert
     suspend fun insert(run: RunEntity)
 }

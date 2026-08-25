@@ -23,4 +23,14 @@ class QuestRepository(context: Context) {
     suspend fun remove(quest: QuestEntity) {
         dao.delete(quest)
     }
+
+    /** For ExportManager. */
+    suspend fun getAllOnce(): List<QuestEntity> = dao.getAllOnce()
+
+    /** For RestoreManager — always inserts as a new row (id=0). Quests are
+     * an accumulating list, so a restore is expected to add history back,
+     * not upsert against something already present. */
+    suspend fun restoreQuest(quest: QuestEntity) {
+        dao.insert(quest.copy(id = 0))
+    }
 }

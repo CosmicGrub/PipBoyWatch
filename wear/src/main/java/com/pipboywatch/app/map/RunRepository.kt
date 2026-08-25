@@ -55,6 +55,14 @@ class RunRepository(context: Context) {
         return true
     }
 
+    /** For ExportManager. */
+    suspend fun getAllOnce(): List<RunEntity> = dao.getAllOnce()
+
+    /** For RestoreManager — always inserts as a new row (id=0). */
+    suspend fun restoreRun(run: RunEntity) {
+        dao.insert(run.copy(id = 0))
+    }
+
     private fun encodeRoute(points: List<RunPoint>): String {
         val array = JSONArray()
         points.forEach { point ->
