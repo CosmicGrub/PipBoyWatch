@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.pipboywatch.app.data.migrations.ALL_MIGRATIONS
 import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
 
@@ -16,7 +17,7 @@ import net.sqlcipher.database.SupportFactory
         RunEntity::class
     ],
     version = 3,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class PipBoyDatabase : RoomDatabase() {
     abstract fun invItemDao(): InvItemDao
@@ -46,9 +47,16 @@ abstract class PipBoyDatabase : RoomDatabase() {
                         // passphrase (see DatabasePassphrase) rather than
                         // leaving it as plain SQLite on disk.
                         .openHelperFactory(SupportFactory(passphrase))
-                        // Pre-release app, no real user data to preserve yet —
-                        // acceptable now, revisit with real migrations before
-                        // this ever ships with data worth keeping.
+                        // Real migrations now (see data/migrations/Migrations.kt)
+                        // — the "no real data to preserve yet" tradeoff this
+                        // comment used to describe stopped being true the
+                        // moment this app started actually being used.
+                        // fallbackToDestructiveMigration stays wired only as
+                        // the terminal fallback for a jump ALL_MIGRATIONS
+                        // doesn't cover (e.g. a pre-version-1 install, if
+                        // that's even reachable) — it is not the steady-state
+                        // path for a version bump anymore.
+                        .addMigrations(*ALL_MIGRATIONS)
                         .fallbackToDestructiveMigration(dropAllTables = true)
                         .build()
                         .also { instance = it }

@@ -18,6 +18,10 @@ android {
         targetSdk = libs.versions.target.sdk.get().toInt()
         versionCode = libs.versions.pipboy.version.code.get().toInt()
         versionName = libs.versions.pipboy.version.name.get()
+
+        // First androidTest in this project needs a real instrumentation
+        // runner (Room's MigrationTestHelper runs on-device, not on the JVM).
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -37,6 +41,14 @@ android {
 
     kotlinOptions {
         freeCompilerArgs += "-opt-in=androidx.wear.compose.foundation.ExperimentalWearFoundationApi"
+    }
+
+    sourceSets {
+        // Room's MigrationTestHelper reads the exported schema JSONs as
+        // test assets at runtime to build historical databases — without
+        // this, PipBoyDatabaseMigrationTest compiles fine but fails at
+        // run time unable to find them.
+        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
     }
 }
 
@@ -81,4 +93,37 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.json)
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.room.testing)
+}
+
+ksp {
+    // Room writes one JSON per version under wear/schemas/ — the ground
+    // truth PipBoyDatabaseMigrationTest's MigrationTestHelper builds
+    // historical databases from. Versions 1 and 2 predate this flag
+    // (exportSchema was false back then); those two were generated for
+    // real from their actual historical commits via scratch git
+    // worktrees, not hand-authored, and checked in alongside this one.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+configurations.all {
+    resolutionStrategy {
+        // room-compiler's schema-export path (only ever exercised once
+        // exportSchema=true, i.e. only just now) deserializes its own
+        // JSON format via kotlinx.serialization. Without forcing a single
+        // consistent version here, a stale/older kotlinx-serialization-core
+        // can win classloading in the KSP worker and throw
+        // AbstractMethodError on GeneratedSerializer.typeParametersSerializers()
+        // — a real, documented Room/KSP interaction, not a mistake in this
+        // build's own declared dependencies (which already resolve 1.8.1
+        // correctly on their own; this just makes that non-negotiable).
+        force("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
+        force("org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.8.1")
+        force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+        force("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.8.1")
+    }
 }
