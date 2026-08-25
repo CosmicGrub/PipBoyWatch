@@ -1,10 +1,10 @@
 package com.pipboywatch.sync
 
-import android.util.Log
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
 import com.pipboywatch.shared.health.HealthConnectManager
+import com.pipboywatch.shared.log.PipLog
 import com.pipboywatch.shared.sync.STAT_REQUEST_PATH
 import com.pipboywatch.shared.sync.STAT_RESPONSE_PATH
 import com.pipboywatch.shared.sync.encodeStatSnapshot
@@ -29,7 +29,7 @@ class StatRequestListenerService : WearableListenerService() {
     private val healthManager by lazy { HealthConnectManager(applicationContext) }
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        Log.d(TAG, "onMessageReceived path=${messageEvent.path} from=${messageEvent.sourceNodeId}")
+        PipLog.d(TAG, "onMessageReceived path=${messageEvent.path} from=${messageEvent.sourceNodeId}")
         if (messageEvent.path != STAT_REQUEST_PATH) return
 
         val sourceNodeId = messageEvent.sourceNodeId
@@ -46,7 +46,7 @@ class StatRequestListenerService : WearableListenerService() {
             // came from a currently-connected paired node before we hand
             // it real Health Connect data.
             if (!isFromTrustedNode(applicationContext, sourceNodeId)) {
-                Log.w(TAG, "Ignoring stat request from untrusted node $sourceNodeId")
+                PipLog.w(TAG, "Ignoring stat request from untrusted node $sourceNodeId")
                 return@launch
             }
             val body = when {
@@ -58,7 +58,7 @@ class StatRequestListenerService : WearableListenerService() {
             Wearable.getMessageClient(applicationContext)
                 .sendMessage(sourceNodeId, STAT_RESPONSE_PATH, payload.toByteArray(Charsets.UTF_8))
                 .addOnCompleteListener { result ->
-                    Log.d(TAG, "reply isSuccessful=${result.isSuccessful} exception=${result.exception}")
+                    PipLog.d(TAG, "reply isSuccessful=${result.isSuccessful} exception=${result.exception}")
                 }
         }
     }

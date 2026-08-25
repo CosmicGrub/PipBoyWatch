@@ -20,6 +20,7 @@
     </queries>
 
     <application
+        android:name=".PipBoyApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -91,5 +92,18 @@
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
             </intent-filter>
         </service>
+
+        <!-- Backs DiagnosticsExporter's ACTION_SEND handoff of the zipped
+             log/crash/metadata bundle — exposes only the diagnostics/
+             export directory, not app-private storage generally. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.diagnostics"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/diagnostics_file_paths" />
+        </provider>
     </application>
 </manifest>

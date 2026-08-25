@@ -1,9 +1,9 @@
 package com.pipboywatch.app.data.notes
 
-import android.util.Log
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.pipboywatch.app.notes.NoteRepository
+import com.pipboywatch.shared.log.PipLog
 import com.pipboywatch.shared.sync.NOTE_PATH
 import com.pipboywatch.shared.sync.decodeNote
 import com.pipboywatch.shared.sync.isFromTrustedNode
@@ -28,7 +28,7 @@ class PipBoyMessageListenerService : WearableListenerService() {
     private val noteRepository by lazy { NoteRepository(applicationContext) }
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        Log.d(TAG, "onMessageReceived path=${messageEvent.path} from=${messageEvent.sourceNodeId}")
+        PipLog.d(TAG, "onMessageReceived path=${messageEvent.path} from=${messageEvent.sourceNodeId}")
         if (messageEvent.path != NOTE_PATH) return
         val text = decodeNote(messageEvent.data)
         if (text.isEmpty()) return
@@ -40,7 +40,7 @@ class PipBoyMessageListenerService : WearableListenerService() {
             // actually came from a node we're currently paired with before
             // writing it into the on-watch database as if the user typed it.
             if (!isFromTrustedNode(applicationContext, sourceNodeId)) {
-                Log.w(TAG, "Ignoring note from untrusted node $sourceNodeId")
+                PipLog.w(TAG, "Ignoring note from untrusted node $sourceNodeId")
                 return@launch
             }
             noteRepository.addFromPhone(text)

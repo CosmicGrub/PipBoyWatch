@@ -30,6 +30,7 @@ import com.pipboywatch.app.backup.RestoreManager
 import com.pipboywatch.app.data.HolotapeEntity
 import com.pipboywatch.app.data.NoteEntity
 import com.pipboywatch.app.data.QuestEntity
+import com.pipboywatch.app.diagnostics.DiagnosticsExporter
 import com.pipboywatch.app.holotape.HolotapeRepository
 import com.pipboywatch.app.notes.NoteRepository
 import com.pipboywatch.app.perks.Perk
@@ -51,8 +52,10 @@ fun DataScreen() {
     val perksRepo = remember { PerksRepository(context) }
     val exportManager = remember { ExportManager(context) }
     val restoreManager = remember { RestoreManager(context) }
+    val diagnosticsExporter = remember { DiagnosticsExporter(context) }
     val coroutineScope = rememberCoroutineScope()
     var backupStatus by remember { mutableStateOf<String?>(null) }
+    var diagnosticsStatus by remember { mutableStateOf<String?>(null) }
 
     val quests by questRepo.observeAll().collectAsState(initial = emptyList())
     val holotapes by holotapeRepo.observeRecent().collectAsState(initial = emptyList())
@@ -215,6 +218,24 @@ fun DataScreen() {
             }
         }
         ActionRow("RESTORE LATEST ENCRYPTED", onClick = restoreEncrypted)
+        Spacer(Modifier.height(16.dp))
+
+        SectionHeader("DIAGNOSTICS")
+        if (diagnosticsStatus != null) {
+            CrtCard(title = "STATUS") {
+                Text(diagnosticsStatus.orEmpty(), color = MaterialTheme.colors.primary, style = MaterialTheme.typography.caption1)
+            }
+            Spacer(Modifier.height(6.dp))
+        }
+        ActionRow("EXPORT DIAGNOSTICS") {
+            try {
+                val intent = diagnosticsExporter.buildExportIntent()
+                context.startActivity(Intent.createChooser(intent, "Export diagnostics").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                diagnosticsStatus = "Diagnostics zip ready to share"
+            } catch (e: Exception) {
+                diagnosticsStatus = "Export failed: ${e.message}"
+            }
+        }
     }
 }
 

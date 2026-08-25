@@ -1,6 +1,6 @@
 package com.pipboywatch.shared.sync
 
-import android.util.Log
+import com.pipboywatch.shared.log.PipLog
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -83,7 +83,7 @@ class PendingRequestTracker<T> {
         if (requestId.isNotBlank()) {
             val current = pending[channel]
             if (current == null || current.requestId != requestId) {
-                Log.d(TAG, "Dropping stale reply channel=$channel requestId=$requestId outstanding=${current?.requestId}")
+                PipLog.d(TAG, "Dropping stale reply channel=$channel requestId=$requestId outstanding=${current?.requestId}")
                 return false
             }
             // Only clear the outstanding marker if it's still the exact
@@ -140,7 +140,7 @@ class PendingRequestTracker<T> {
             // by a sweep that was only ever entitled to remove the OLD
             // entry it read at the top of this loop iteration.
             if (pending.remove(channel, current)) {
-                Log.d(TAG, "Expired stale outstanding request channel=$channel requestId=${current.requestId}")
+                PipLog.d(TAG, "Expired stale outstanding request channel=$channel requestId=${current.requestId}")
                 expired += channel
             }
         }

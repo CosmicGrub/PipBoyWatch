@@ -5,9 +5,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.widget.Toast
 import com.google.android.gms.wearable.Wearable
+import com.pipboywatch.shared.log.PipLog
 import com.pipboywatch.shared.sync.NOTE_PATH
 import com.pipboywatch.shared.sync.encodeNote
 
@@ -31,7 +31,7 @@ class SendNoteActivity : Activity() {
         // Log the note's length, not its content — this is free-text the
         // user shared, and logcat is readable by anything with ADB/shell
         // access even on a release build.
-        if (BuildConfig.DEBUG) Log.d(TAG, "onCreate textLength=${text?.length}")
+        if (BuildConfig.DEBUG) PipLog.d(TAG, "onCreate textLength=${text?.length}")
 
         if (text.isNullOrBlank()) {
             toastAndFinish("Nothing to send")
@@ -43,7 +43,7 @@ class SendNoteActivity : Activity() {
 
         nodeClient.connectedNodes
             .addOnSuccessListener { nodes ->
-                Log.d(TAG, "connectedNodes success, count=${nodes.size} nodes=${nodes.map { it.displayName }}")
+                PipLog.d(TAG, "connectedNodes success, count=${nodes.size} nodes=${nodes.map { it.displayName }}")
                 if (nodes.isEmpty()) {
                     toastAndFinish("No Pip-Boy watch connected")
                     return@addOnSuccessListener
@@ -53,7 +53,7 @@ class SendNoteActivity : Activity() {
                 nodes.forEach { node ->
                     messageClient.sendMessage(node.id, NOTE_PATH, encodeNote(text))
                         .addOnCompleteListener { result ->
-                            Log.d(TAG, "sendMessage to ${node.id} isSuccessful=${result.isSuccessful} exception=${result.exception}")
+                            PipLog.d(TAG, "sendMessage to ${node.id} isSuccessful=${result.isSuccessful} exception=${result.exception}")
                             pending--
                             if (result.isSuccessful) anySucceeded = true
                             if (pending == 0) {
@@ -63,13 +63,13 @@ class SendNoteActivity : Activity() {
                 }
             }
             .addOnFailureListener { e ->
-                Log.d(TAG, "connectedNodes failure", e)
+                PipLog.w(TAG, "connectedNodes failure", e)
                 toastAndFinish("Couldn't reach watch")
             }
     }
 
     private fun toastAndFinish(message: String) {
-        Log.d(TAG, "result: $message")
+        PipLog.d(TAG, "result: $message")
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         // Give the Toast a moment to actually attach its window before we
         // finish() and the process potentially gets reclaimed — finishing

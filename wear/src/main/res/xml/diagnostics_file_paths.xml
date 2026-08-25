@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backs the diagnostics FileProvider (see DiagnosticsExporter) — exposes
+     only getExternalFilesDir(null)/diagnostics, the zip's own output
+     directory, not the whole app-private storage tree. -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path name="diagnostics" path="diagnostics/" />
+</paths>

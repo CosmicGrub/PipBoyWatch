@@ -1,8 +1,8 @@
 package com.pipboywatch.shared.sync
 
 import android.content.Context
-import android.util.Log
 import com.google.android.gms.wearable.Wearable
+import com.pipboywatch.shared.log.PipLog
 import kotlinx.coroutines.tasks.await
 
 private const val TAG = "PipBoyTrustedNode"
@@ -20,7 +20,7 @@ suspend fun isFromTrustedNode(context: Context, sourceNodeId: String): Boolean {
     return try {
         Wearable.getNodeClient(context).connectedNodes.await().any { it.id == sourceNodeId }
     } catch (e: Exception) {
-        Log.d(TAG, "isFromTrustedNode check failed", e)
+        PipLog.w(TAG, "isFromTrustedNode check failed", e)
         false
     }
 }

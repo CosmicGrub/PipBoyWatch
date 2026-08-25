@@ -1,8 +1,8 @@
 package com.pipboywatch.app.health
 
 import android.content.Context
-import android.util.Log
 import com.google.android.gms.wearable.Wearable
+import com.pipboywatch.shared.log.PipLog
 import com.pipboywatch.shared.sync.PendingRequestTracker
 import com.pipboywatch.shared.sync.STAT_REQUEST_PATH
 import com.pipboywatch.shared.sync.StatDecodeResult
@@ -59,7 +59,7 @@ object PhoneStatRelay {
 
     fun onResponseReceived(payload: String) {
         val reply = decodeStatReply(payload)
-        Log.d(TAG, "onResponseReceived requestId=${reply.requestId}")
+        PipLog.d(TAG, "onResponseReceived requestId=${reply.requestId}")
         // Only cancel the pending timeout if this reply was actually
         // accepted — a stale/mismatched reply (complete() returning
         // false) shouldn't cancel the timeout still watching the real
@@ -79,13 +79,13 @@ object PhoneStatRelay {
         timeoutJob = CoroutineScope(Dispatchers.Default).launch {
             delay(REPLY_TIMEOUT_MILLIS)
             if (tracker.expireStale(System.currentTimeMillis()).contains(CHANNEL)) {
-                Log.d(TAG, "requestFromPhone id=$requestId timed out waiting for a reply")
+                PipLog.d(TAG, "requestFromPhone id=$requestId timed out waiting for a reply")
                 tracker.complete(CHANNEL, "", StatDecodeResult.Unavailable)
             }
         }
         try {
             val nodes = Wearable.getNodeClient(context).connectedNodes.await()
-            Log.d(TAG, "requestFromPhone id=$requestId nodes=${nodes.map { "${it.displayName}(${it.id}, nearby=${it.isNearby})" }}")
+            PipLog.d(TAG, "requestFromPhone id=$requestId nodes=${nodes.map { "${it.displayName}(${it.id}, nearby=${it.isNearby})" }}")
             if (nodes.isEmpty()) {
                 timeoutJob?.cancel()
                 tracker.complete(CHANNEL, requestId, StatDecodeResult.Unavailable)
@@ -95,13 +95,13 @@ object PhoneStatRelay {
             nodes.forEach { node ->
                 messageClient.sendMessage(node.id, STAT_REQUEST_PATH, requestId.toByteArray(Charsets.UTF_8))
                     .addOnCompleteListener { result ->
-                        Log.d(TAG, "sendMessage to ${node.id} isSuccessful=${result.isSuccessful} exception=${result.exception}")
+                        PipLog.d(TAG, "sendMessage to ${node.id} isSuccessful=${result.isSuccessful} exception=${result.exception}")
                     }
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.d(TAG, "requestFromPhone failed", e)
+            PipLog.w(TAG, "requestFromPhone failed", e)
             timeoutJob?.cancel()
             tracker.complete(CHANNEL, requestId, StatDecodeResult.Unavailable)
         }
