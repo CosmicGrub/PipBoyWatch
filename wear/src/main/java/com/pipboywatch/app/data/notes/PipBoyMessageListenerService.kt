@@ -4,6 +4,8 @@ import android.util.Log
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.pipboywatch.app.notes.NoteRepository
+import com.pipboywatch.shared.sync.NOTE_PATH
+import com.pipboywatch.shared.sync.decodeNote
 import com.pipboywatch.shared.sync.isFromTrustedNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,10 +16,12 @@ private const val TAG = "PipBoyNotes"
 
 /**
  * Built in Phase 4, has nothing to receive from until Phase 7 builds the
- * phone-side Share-sheet sender. Listens on NOTE_PATH for a UTF-8 text
- * payload and stores it as a note, same table the on-watch "+ Add Note"
- * RemoteInput flow writes to — via NoteRepository, same as the on-watch
- * flow, rather than hitting the DAO directly.
+ * phone-side Share-sheet sender. Listens on NOTE_PATH (now declared once,
+ * in :shared's SyncChannelRegistry, alongside every other channel's paths
+ * — see System 06) for a UTF-8 text payload and stores it as a note, same
+ * table the on-watch "+ Add Note" RemoteInput flow writes to — via
+ * NoteRepository, same as the on-watch flow, rather than hitting the DAO
+ * directly.
  */
 class PipBoyMessageListenerService : WearableListenerService() {
     private val serviceScope = CoroutineScope(Dispatchers.IO)
@@ -26,7 +30,7 @@ class PipBoyMessageListenerService : WearableListenerService() {
     override fun onMessageReceived(messageEvent: MessageEvent) {
         Log.d(TAG, "onMessageReceived path=${messageEvent.path} from=${messageEvent.sourceNodeId}")
         if (messageEvent.path != NOTE_PATH) return
-        val text = String(messageEvent.data, Charsets.UTF_8).trim()
+        val text = decodeNote(messageEvent.data)
         if (text.isEmpty()) return
 
         val sourceNodeId = messageEvent.sourceNodeId
@@ -46,9 +50,5 @@ class PipBoyMessageListenerService : WearableListenerService() {
     override fun onDestroy() {
         serviceScope.cancel()
         super.onDestroy()
-    }
-
-    companion object {
-        const val NOTE_PATH = "/pipboy/note"
     }
 }

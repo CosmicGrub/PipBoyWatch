@@ -6,12 +6,17 @@ import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Wire paths and encoding for the phone -> watch STAT relay. The watch
- * can't read Health Connect on this hardware (see HealthConnectManager),
- * so it asks the phone for a snapshot instead. Both the encoder (phone)
- * and decoder (watch) live here now — this used to be hand-duplicated
- * across the two modules with a comment warning to keep them in sync by
- * hand; that's exactly the risk a shared module removes.
+ * Encoding for the phone -> watch STAT relay. The watch can't read Health
+ * Connect on this hardware (see HealthConnectManager), so it asks the
+ * phone for a snapshot instead. Both the encoder (phone) and decoder
+ * (watch) live here now — this used to be hand-duplicated across the two
+ * modules with a comment warning to keep them in sync by hand; that's
+ * exactly the risk a shared module removes.
+ *
+ * STAT_REQUEST_PATH/STAT_RESPONSE_PATH themselves now live in
+ * SyncChannelRegistry.kt alongside every other channel's paths, not here —
+ * this file kept the wire-format doc comment since that's specific to
+ * STAT's encoding, not the registry's concern.
  *
  * STAT_REQUEST_PATH payload: the request id as raw UTF-8 bytes (see
  * newRequestId()) — nothing else needed, the phone just echoes it back.
@@ -27,8 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger
  * newer request — see StatDecodeReply and PhoneStatRelay's outstanding-id
  * tracking on the watch side.
  */
-const val STAT_REQUEST_PATH = "/pipboy/stat/request"
-const val STAT_RESPONSE_PATH = "/pipboy/stat"
 
 /** Not a security token, just a collision-resistant-enough tag for
  * matching a reply to the request that triggered it within one process's

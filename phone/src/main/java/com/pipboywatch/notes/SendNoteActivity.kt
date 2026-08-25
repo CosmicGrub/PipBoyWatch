@@ -8,8 +8,9 @@ import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import com.google.android.gms.wearable.Wearable
+import com.pipboywatch.shared.sync.NOTE_PATH
+import com.pipboywatch.shared.sync.encodeNote
 
-private const val NOTE_PATH = "/pipboy/note"
 private const val TAG = "PipBoyNotes"
 
 /**
@@ -50,7 +51,7 @@ class SendNoteActivity : Activity() {
                 var pending = nodes.size
                 var anySucceeded = false
                 nodes.forEach { node ->
-                    messageClient.sendMessage(node.id, NOTE_PATH, text.toByteArray(Charsets.UTF_8))
+                    messageClient.sendMessage(node.id, NOTE_PATH, encodeNote(text))
                         .addOnCompleteListener { result ->
                             Log.d(TAG, "sendMessage to ${node.id} isSuccessful=${result.isSuccessful} exception=${result.exception}")
                             pending--
