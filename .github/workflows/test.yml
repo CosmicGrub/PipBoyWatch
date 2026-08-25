@@ -1,0 +1,49 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # Compiles all three modules — the cheapest possible regression
+      # gate, catching a build break even on lines with no test coverage.
+      - name: Build
+        run: ./gradlew :wear:assembleDebug :phone:assembleDebug --stacktrace
+
+      # Everything with a real unit test suite today. Add a module here
+      # the day it gets its first test — don't wait for a "test sweep".
+      - name: Unit tests
+        run: ./gradlew :shared:testDebugUnitTest :wear:testDebugUnitTest --stacktrace
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            shared/build/test-results/**/*.xml
+            wear/build/test-results/**/*.xml
+          if-no-files-found: ignore

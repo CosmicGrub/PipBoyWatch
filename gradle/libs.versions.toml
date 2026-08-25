@@ -1,0 +1,82 @@
+[versions]
+# Build tooling
+agp = "8.9.2"
+kotlin = "2.0.21"
+ksp = "2.0.21-1.0.28"
+
+# Shared across wear/ and phone/ so a release build always ships both
+# halves of a pair at the same version — was two independently
+# hand-edited hardcoded values before this file existed.
+pipboy-version-code = "1"
+pipboy-version-name = "0.1.0"
+
+# compileSdk/targetSdk are identical across all three modules by design
+# (unlike minSdk, which intentionally differs: wear=30, phone/shared=26 —
+# left hardcoded per-module, not centralized here).
+compile-sdk = "36"
+target-sdk = "36"
+
+# AndroidX / Compose
+activity-compose = "1.9.3"
+activity-ktx = "1.9.3"
+compose-bom = "2024.10.00"
+core-ktx = "1.13.1"
+datastore-preferences = "1.1.1"
+lifecycle-runtime-ktx = "2.8.7"
+room = "2.8.4"
+security-crypto = "1.1.0"
+sqlite = "2.4.0"
+
+# Wear
+wear = "1.3.0"
+wear-compose = "1.4.0"
+wear-input = "1.2.0"
+
+# Health Connect (shared module + phone)
+health-connect = "1.1.0"
+
+# Google Play Services
+play-services-wearable = "20.0.1"
+play-services-location = "21.3.0"
+coroutines-play-services = "1.9.0"
+
+# Third-party
+sqlcipher = "4.5.4"
+
+# Testing
+junit = "4.13.2"
+
+[libraries]
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activity-ktx" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
+compose-foundation = { module = "androidx.compose.foundation:foundation" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
+datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore-preferences" }
+health-connect-client = { module = "androidx.health.connect:connect-client", version.ref = "health-connect" }
+lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle-runtime-ktx" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+security-crypto = { module = "androidx.security:security-crypto", version.ref = "security-crypto" }
+sqlite = { module = "androidx.sqlite:sqlite", version.ref = "sqlite" }
+wear = { module = "androidx.wear:wear", version.ref = "wear" }
+wear-compose-foundation = { module = "androidx.wear.compose:compose-foundation", version.ref = "wear-compose" }
+wear-compose-material = { module = "androidx.wear.compose:compose-material", version.ref = "wear-compose" }
+wear-compose-navigation = { module = "androidx.wear.compose:compose-navigation", version.ref = "wear-compose" }
+wear-input = { module = "androidx.wear:wear-input", version.ref = "wear-input" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
+play-services-wearable = { module = "com.google.android.gms:play-services-wearable", version.ref = "play-services-wearable" }
+coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutines-play-services" }
+sqlcipher = { module = "net.zetetic:android-database-sqlcipher", version.ref = "sqlcipher" }
+junit = { module = "junit:junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

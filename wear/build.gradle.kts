@@ -1,20 +1,23 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.pipboywatch.app"
-    compileSdk = 36
+    compileSdk = libs.versions.compile.sdk.get().toInt()
 
     defaultConfig {
         applicationId = "com.pipboywatch.app"
+        // Intentionally not centralized in the version catalog — this
+        // genuinely differs from phone/shared's 26, unlike compileSdk/
+        // targetSdk below which are identical across all three modules.
         minSdk = 30
-        targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        targetSdk = libs.versions.target.sdk.get().toInt()
+        versionCode = libs.versions.pipboy.version.code.get().toInt()
+        versionName = libs.versions.pipboy.version.name.get()
     }
 
     buildTypes {
@@ -40,41 +43,41 @@ android {
 dependencies {
     implementation(project(":shared"))
 
-    implementation(platform("androidx.compose:compose-bom:2024.10.00"))
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.foundation:foundation")
-    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation(platform(libs.compose.bom))
+    implementation(libs.activity.compose)
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.foundation)
+    debugImplementation(libs.compose.ui.tooling)
 
-    implementation("androidx.wear.compose:compose-material:1.4.0")
-    implementation("androidx.wear.compose:compose-foundation:1.4.0")
-    implementation("androidx.wear.compose:compose-navigation:1.4.0")
-    implementation("androidx.wear:wear:1.3.0")
+    implementation(libs.wear.compose.material)
+    implementation(libs.wear.compose.foundation)
+    implementation(libs.wear.compose.navigation)
+    implementation(libs.wear)
 
-    implementation("androidx.health.connect:connect-client:1.1.0")
+    implementation(libs.health.connect.client)
 
-    implementation("androidx.room:room-runtime:2.8.4")
-    implementation("androidx.room:room-ktx:2.8.4")
-    ksp("androidx.room:room-compiler:2.8.4")
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     // Room's DB holds GPS routes, heart rate, free-text notes, and mirrored
     // notification content — SQLCipher encrypts the on-disk file; the
     // passphrase itself is generated and Keystore-wrapped via security-crypto
     // (see DatabasePassphrase.kt), never hardcoded.
-    implementation("net.zetetic:android-database-sqlcipher:4.5.4")
-    implementation("androidx.sqlite:sqlite:2.4.0")
-    implementation("androidx.security:security-crypto:1.1.0")
+    implementation(libs.sqlcipher)
+    implementation(libs.sqlite)
+    implementation(libs.security.crypto)
 
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation(libs.datastore.preferences)
 
-    implementation("com.google.android.gms:play-services-wearable:20.0.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    implementation(libs.play.services.wearable)
+    implementation(libs.coroutines.play.services)
 
-    implementation("androidx.wear:wear-input:1.2.0")
-    implementation("androidx.core:core-ktx:1.13.1")
+    implementation(libs.wear.input)
+    implementation(libs.core.ktx)
 
-    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation(libs.play.services.location)
 
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
 }

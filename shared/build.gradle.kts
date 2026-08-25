@@ -1,11 +1,11 @@
 plugins {
-    id("com.android.library")
-    id("org.jetbrains.kotlin.android")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
     namespace = "com.pipboywatch.shared"
-    compileSdk = 36
+    compileSdk = libs.versions.compile.sdk.get().toInt()
 
     defaultConfig {
         // Matches phone's floor (the lower of the two consumers) so this
@@ -20,9 +20,9 @@ android {
 }
 
 dependencies {
-    implementation("androidx.health.connect:connect-client:1.1.0")
-    implementation("com.google.android.gms:play-services-wearable:20.0.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    implementation(libs.health.connect.client)
+    implementation(libs.play.services.wearable)
+    implementation(libs.coroutines.play.services)
 
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
 }

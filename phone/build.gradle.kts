@@ -1,11 +1,11 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
     namespace = "com.pipboywatch.notes"
-    compileSdk = 36
+    compileSdk = libs.versions.compile.sdk.get().toInt()
 
     defaultConfig {
         // Must match the wear module's applicationId exactly — the Wear
@@ -17,10 +17,11 @@ android {
         // notes, via `namespace` above) is unaffected — only this ID
         // needs to match.
         applicationId = "com.pipboywatch.app"
+        // Intentionally not centralized — genuinely differs from wear's 30.
         minSdk = 26
-        targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        targetSdk = libs.versions.target.sdk.get().toInt()
+        versionCode = libs.versions.pipboy.version.code.get().toInt()
+        versionName = libs.versions.pipboy.version.name.get()
     }
 
     buildTypes {
@@ -45,15 +46,15 @@ android {
 dependencies {
     implementation(project(":shared"))
 
-    implementation("com.google.android.gms:play-services-wearable:20.0.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    implementation(libs.play.services.wearable)
+    implementation(libs.coroutines.play.services)
 
     // Phone-side Health Connect relay: the watch's own Health Connect access
     // is broken on this hardware (see :shared's HealthConnectManager) — the
     // phone is the reliable source, so it reads here and pushes a snapshot
     // to the watch over the Wear Data Layer.
-    implementation("androidx.health.connect:connect-client:1.1.0")
-    implementation("androidx.activity:activity-ktx:1.9.3")
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation(libs.health.connect.client)
+    implementation(libs.activity.ktx)
+    implementation(libs.core.ktx)
+    implementation(libs.lifecycle.runtime.ktx)
 }
