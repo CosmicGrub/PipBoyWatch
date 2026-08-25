@@ -7,3 +7,9 @@ local.properties
 .kotlin/
 captures/
 .cxx/
+
+# Real release-signing secrets — see RELEASE.md and the .example files
+# committed alongside these. Never commit a real keystore or its passwords.
+keystore.properties
+*.jks
+*.keystore

@@ -1,6 +1,18 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+}
+
+// See RELEASE.md and keystore.properties.example — and its own comment on
+// why keyAlias here MUST match wear's exactly. Absent on a fresh clone and
+// in CI; without it the release build type produces an unsigned APK,
+// exactly AGP's own default when no signingConfig is assigned.
+val keystorePropertiesFile = file("keystore.properties")
+val hasReleaseKeystore = keystorePropertiesFile.exists()
+val keystoreProperties = Properties().apply {
+    if (hasReleaseKeystore) load(keystorePropertiesFile.inputStream())
 }
 
 android {
@@ -24,9 +36,23 @@ android {
         versionName = libs.versions.pipboy.version.name.get()
     }
 
+    if (hasReleaseKeystore) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -57,4 +83,9 @@ dependencies {
     implementation(libs.activity.ktx)
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)
+    // Forces the transitive fragment dependency (was resolving to 1.1.0)
+    // up to the 1.3.0+ floor MainActivity's registerForActivityResult
+    // requires — see the version catalog entry for why this was latent
+    // until :phone:assembleRelease actually ran for the first time.
+    implementation(libs.fragment.ktx)
 }

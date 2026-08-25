@@ -1,8 +1,23 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+// See RELEASE.md and keystore.properties.example. Absent on a fresh clone
+// and in CI (neither commits a real keystore) — without it the release
+// build type produces an unsigned APK, exactly AGP's own default when no
+// signingConfig is assigned (there is no implicit debug-signing fallback
+// for the release build type the way there is for debug). This file
+// never changes that baseline behavior; it only ever adds real signing
+// once a developer actually sets up keystore.properties.
+val keystorePropertiesFile = file("keystore.properties")
+val hasReleaseKeystore = keystorePropertiesFile.exists()
+val keystoreProperties = Properties().apply {
+    if (hasReleaseKeystore) load(keystorePropertiesFile.inputStream())
 }
 
 android {
@@ -24,9 +39,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    if (hasReleaseKeystore) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
