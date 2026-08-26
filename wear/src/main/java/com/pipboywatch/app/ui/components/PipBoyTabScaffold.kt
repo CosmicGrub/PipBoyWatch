@@ -1,5 +1,6 @@
 package com.pipboywatch.app.ui.components
 
+import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -19,6 +20,16 @@ import androidx.wear.compose.foundation.rotary.rotaryScrollable
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 
+/** Rotary-driven scroll delta is scaled by this before reaching the real
+ * ScrollState — Wear Compose's own default 1:1 rotary-to-scroll mapping
+ * moved fast enough on the Galaxy Watch6 Classic's physical bezel to
+ * skip past a whole section (QUESTS/HOLOTAPES/PERKS/NOTES/BACKUP/
+ * DIAGNOSTICS on DATA, for instance) in one detent's worth of rotation —
+ * real-world feedback, the same complaint that motivated
+ * HomeDialScreen's DIAL_DETENT_THRESHOLD bump. Touch-drag scrolling is
+ * untouched by this — see the wrapper's own comment below for why. */
+private const val ROTARY_SCROLL_SENSITIVITY = 0.4f
+
 /**
  * The scroll/rotary/title/scanline shell every tab screen was hand-copying
  * (StatScreen, InvScreen, DataScreen, MapScreen, RadioScreen,
@@ -36,7 +47,16 @@ fun PipBoyTabScaffold(
 ) {
     val scrollState = rememberScrollState()
     val focusRequester = rememberActiveFocusRequester()
-    val rotaryBehavior = RotaryScrollableDefaults.behavior(scrollableState = scrollState)
+    // A separate ScrollableState sitting between the rotary input path and
+    // the real scrollState, scaling delta down before applying it — the
+    // Column's own Modifier.verticalScroll(scrollState) below still uses
+    // the real, unscaled scrollState directly, so touch-drag scrolling
+    // keeps its normal 1:1 feel; only bezel rotation is slowed.
+    val rotaryScrollableState = rememberScrollableState { delta ->
+        scrollState.dispatchRawDelta(delta * ROTARY_SCROLL_SENSITIVITY)
+        delta
+    }
+    val rotaryBehavior = RotaryScrollableDefaults.behavior(scrollableState = rotaryScrollableState)
 
     Box(
         modifier = modifier
